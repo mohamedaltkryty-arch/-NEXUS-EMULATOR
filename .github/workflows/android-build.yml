@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nexus-android-build-\${{ github.ref }}
+  group: nexus-android-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -29,15 +29,16 @@ jobs:
       - name: Locate Android SDK
         shell: bash
         run: |
-          if [ -z "\${ANDROID_HOME:-}" ]; then
+          if [ -z "$ANDROID_HOME" ]; then
             echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
             echo "/usr/local/lib/android/sdk" >> "$GITHUB_PATH"
+            export ANDROID_HOME=/usr/local/lib/android/sdk
           fi
 
       - name: Install Android SDK packages
         shell: bash
         run: |
-          SDK_ROOT="\${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDK_ROOT="$ANDROID_HOME"
           SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
           test -x "$SDKMANAGER"
           set +o pipefail
