@@ -31,8 +31,8 @@ The exact upstream sources are mounted at `engines/<name>` as Git submodules. Th
 Clone the repository and initialize all engine submodules:
 
 ```bash
-git clone https://github.com/mohamedaltkryty-arch/-NEXUS-EMULATOR.git
-cd -NEXUS-EMULATOR
+git clone https://github.com/mohamedaltkryty-arch/-NEXUS-EMULATOR.git NEXUS-EMULATOR
+cd NEXUS-EMULATOR
 git submodule update --init --recursive
 ```
 
