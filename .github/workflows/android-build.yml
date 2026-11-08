@@ -1,4 +1,4 @@
-name: Build NEXUS Android APK
+name: Build and smoke-test NEXUS
 
 on:
   push:
@@ -9,19 +9,19 @@ permissions:
   contents: read
 
 concurrency:
-  group: nexus-android-build-${{ github.ref }}
+  group: nexus-android-build-\${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-launcher:
-    name: Build launcher APK (engines not yet embedded)
+  build-and-test:
+    name: Unit tests, Android build and emulator smoke test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout NEXUS
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -29,7 +29,7 @@ jobs:
       - name: Locate Android SDK
         shell: bash
         run: |
-          if [ -z "${ANDROID_HOME:-}" ]; then
+          if [ -z "\${ANDROID_HOME:-}" ]; then
             echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
             echo "/usr/local/lib/android/sdk" >> "$GITHUB_PATH"
           fi
@@ -37,7 +37,7 @@ jobs:
       - name: Install Android SDK packages
         shell: bash
         run: |
-          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDK_ROOT="\${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
           test -x "$SDKMANAGER"
           set +o pipefail
@@ -50,8 +50,25 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Run JVM unit tests
+        run: gradle --no-daemon :app:testDebugUnitTest
+
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
+
+      - name: Install and launch on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell am force-stop com.nexus.emulator.debug
+            adb shell am start -W -n com.nexus.emulator.debug/com.nexus.emulator.MainActivity
+            sleep 3
+            adb shell dumpsys activity activities | grep -q "com.nexus.emulator.MainActivity"
+            adb shell pm path com.nexus.emulator.debug
 
       - name: Calculate APK checksum
         run: sha256sum app/build/outputs/apk/debug/*.apk

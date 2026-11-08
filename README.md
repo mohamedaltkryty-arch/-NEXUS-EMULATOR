@@ -1,73 +1,74 @@
 # NEXUS EMULATOR
 
-Android-first multi-engine game launcher for the POCO X4 GT target device.
+**Android-first game library and multi-engine frontend.** Target device: POCO X4 GT (Dimensity 8100, Mali-G610 MC6, 12 GB RAM, 256 GB storage as reported by the owner).
 
-**Current milestone: repository bootstrap + engine source pinning.** The Android app currently provides a launcher/library foundation. The upstream projects are added as Git submodules, but they are **not yet linked into the APK**. Do not treat this bootstrap APK as an emulator.
+> Current milestone is a functioning game-library launcher. Four upstream engine sources are linked as pinned Git submodules but are not embedded into the APK yet. This build does not execute game files.
 
-## Target device profile
+## Working features
 
-- Device: POCO X4 GT
-- SoC: MediaTek Dimensity 8100
-- GPU: Mali-G610 MC6
-- ABI: arm64-v8a
-- RAM: 12 GB (user-reported)
-- Storage: 256 GB
+- Arabic RTL by default and English language switch.
+- Dark and light themes.
+- Local SQLite game library with search, platform filters and favorites.
+- Single/multi-file import through Android Storage Access Framework.
+- Folder import for installed Windows game folders or PS3 game folders.
+- Manual platform selection for ambiguous ISO/BIN/CSO images.
+- Local storage of URI references; game binaries are not copied or uploaded.
+- Four-engine source registry that reports runtime integration status.
+- GitHub Actions: JVM unit tests, debug APK build and Android emulator smoke launch.
 
-Performance and compatibility are game-specific. PS3 and Windows PC emulation must not be promised for every title on this device.
+## Engine source modules
 
-## Engine sources
-
-| Platform | Source | Pinned revision | License |
+| Platform | Engine | Source | License |
 |---|---|---|---|
-| PSP | [PPSSPP](https://github.com/hrydgard/ppsspp) | See `engines.lock.json` | GPL-2.0-or-later |
-| PS2 | [ARMSX2](https://github.com/ARMSX2/ARMSX2) | See `engines.lock.json` | GPL-3.0 |
-| Windows | [Winlator app source](https://github.com/brunodev85/winlator-app) | See `engines.lock.json` | LGPL-2.1 |
-| PS3 | [ARMSX3](https://github.com/ARMSX2/ARMSX3) | See `engines.lock.json` | GPL-2.0-only |
+| PSP | PPSSPP | https://github.com/hrydgard/ppsspp | GPL-2.0-or-later |
+| PS2 | ARMSX2 | https://github.com/ARMSX2/ARMSX2 | GPL-3.0 |
+| Windows | Winlator app | https://github.com/brunodev85/winlator-app | LGPL-2.1 |
+| PS3 | ARMSX3 | https://github.com/ARMSX2/ARMSX3 | GPL-2.0-only |
 
-The exact upstream sources are mounted at `engines/<name>` as Git submodules. They remain separate upstream projects with their own history and license files. This repository does not relicense them.
+Clone with all pinned submodules:
 
-## Get the full source tree
+    git clone https://github.com/mohamedaltkry-arch/-NEXUS-EMULATOR.git NEXUS-EMULATOR
+    cd NEXUS-EMULATOR
+    git submodule update --init --recursive
 
-Clone the repository and initialize all engine submodules:
+## Build
 
-```bash
-git clone https://github.com/mohamedaltkryty-arch/-NEXUS-EMULATOR.git NEXUS-EMULATOR
-cd NEXUS-EMULATOR
-git submodule update --init --recursive
-```
+Requirements: JDK 17, Android SDK Platform 35, Build Tools 35.0.0, Gradle 8.9.
 
-The pinned upstream revisions are intentional. Do not update submodules to moving branches without checking compatibility, build requirements, and license notices.
+    gradle --no-daemon testDebugUnitTest assembleDebug
 
-## Build the Android launcher
+APK: app/build/outputs/apk/debug/app-debug.apk.
 
-Requirements: JDK 17, Android SDK Platform 35, Build Tools 35.0.0, and Gradle 8.9.
+CI runs JVM tests, builds the APK, installs it on an Android emulator and launches the main activity. A successful run uploads a debug-signed APK artifact under the Actions run.
 
-```bash
-gradle --no-daemon :app:assembleDebug
-```
+## Importing games
 
-APK output: `app/build/outputs/apk/debug/app-debug.apk`.
+- PSP: .ISO, .CSO, .PBP, .ZSO.
+- PS2: .ISO, .CHD, .CSO, .BIN.
+- PS3: .PKG or a PS3 game folder.
+- Windows: import the complete installed game folder. An EXE by itself is not a complete game.
 
-A GitHub Actions workflow builds the launcher APK and uploads it as a workflow artifact on pushes and manual dispatches. The workflow does not compile the four native engines yet.
+The picker asks the user to grant access. NEXUS stores document URIs in its private SQLite database and does not copy or upload game binaries.
 
-## Engine integration status
+## Not yet integrated
 
-- [x] Create Android project and launcher/library foundation.
-- [x] Add upstream source repositories as pinned Git submodules.
-- [x] Add reproducible engine revision manifest.
-- [x] Add Android debug-APK CI workflow.
-- [ ] Add PPSSPP Android JNI/native build and in-app launch adapter.
-- [ ] Add ARMSX2 native build and in-app launch adapter.
-- [ ] Add Winlator runtime/container integration.
-- [ ] Add ARMSX3 native core build and in-app launch adapter.
-- [ ] Add per-game compatibility tests, controller profiles, save handling, telemetry-free crash logs, and device thermal safeguards.
+- Native PPSSPP, ARMSX2, Winlator and ARMSX3 runtime adapters.
+- BIOS, firmware, keys or commercial game files.
+- Universal game compatibility guarantees.
 
-See [ENGINE_INTEGRATION.md](docs/ENGINE_INTEGRATION.md) before attempting native builds.
+A source submodule is not a running emulator. A platform is marked ready only after its native runtime is integrated and verified on real devices.
 
-## Legal and safety
+## Security and privacy
 
-NEXUS does not include game images, console BIOS, PlayStation firmware, decryption keys, proprietary SDKs, or other copyrighted system files. Users must supply files they are legally entitled to use. PPSSPP does not require a PSP BIOS; ARMSX2 requires a legitimately dumped PS2 BIOS; ARMSX3 requires the official PS3 firmware supplied by the user.
+- No INTERNET permission or remote API.
+- No account or analytics.
+- SAF-only access to user-selected files and folders.
+- SQLite ContentValues and selection arguments; no shell execution.
+- Android auto-backup disabled.
+- Do not upload game images, console BIOS, PS3 firmware or keys to this public source repository.
 
-Before distributing a build containing an engine, preserve its copyright notices and license, provide corresponding source where required, and audit all third-party dependencies. ARMSX2 (GPL-3.0) and ARMSX3 (GPL-2.0-only) have different licensing terms; keep engine code isolated and obtain a proper license review before combining or redistributing modified binaries.
+See docs/PRODUCT_SPEC.md, docs/DATABASE_AND_SECURITY.md, and docs/ENGINE_INTEGRATION.md.
 
-This project is not affiliated with Sony, Microsoft, Nintendo, the PPSSPP team, ARMSX, PCSX2, RPCS3, or Winlator developers.
+## Licenses
+
+Each engine remains a separate Git submodule and retains its own notices and license. Audit transitive dependencies and fulfil the exact corresponding-source and attribution requirements before distributing a combined APK. ARMSX2 (GPL-3.0) and ARMSX3 (GPL-2.0-only) must remain separately identifiable; do not assume those licenses are automatically compatible for combined derivative code.
