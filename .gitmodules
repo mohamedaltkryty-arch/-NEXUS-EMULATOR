@@ -1,0 +1,12 @@
+[submodule "engines/ppsspp"]
+	path = engines/ppsspp
+	url = https://github.com/hrydgard/ppsspp.git
+[submodule "engines/armsx2"]
+	path = engines/armsx2
+	url = https://github.com/ARMSX2/ARMSX2.git
+[submodule "engines/winlator-app"]
+	path = engines/winlator-app
+	url = https://github.com/brunodev85/winlator-app.git
+[submodule "engines/armsx3"]
+	path = engines/armsx3
+	url = https://github.com/ARMSX2/ARMSX3.git
