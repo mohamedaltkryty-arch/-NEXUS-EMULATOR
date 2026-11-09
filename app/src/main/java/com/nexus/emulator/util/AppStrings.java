@@ -53,9 +53,16 @@ public final class AppStrings {
         put("engine_status", "حالة المحرك", "Engine status");
         put("source_only", "المصدر متاح — الدمج قيد التطوير", "Source available — integration in progress");
         put("about", "حول NEXUS", "About NEXUS");
-        put("about_body", "NEXUS مدير مكتبة ألعاب Android. لا يتضمن ألعاباً أو BIOS أو Firmware. يجب أن توفر ملفاتك التي تملك حق استخدامها.", "NEXUS is an Android game library. It does not include games, BIOS files, or firmware. Import only files you are entitled to use.");
+        put("about_body", "NEXUS يجمع ألعابك في مكتبة واحدة. تشغيل ألعاب PSP يتم عبر PPSSPP الرسمي، ولا يتضمن التطبيق ألعاباً أو BIOS أو Firmware.", "NEXUS brings your games together in one library. PSP playback uses the official PPSSPP app. Games, BIOS and firmware are not included.");
         put("pc_folder_tip", "استورد مجلد اللعبة كاملاً، لا ملف EXE وحده.", "Import the complete game folder, not only the EXE file.");
         put("engines_count", "أربعة مصادر محركات مرتبطة", "Four engine sources linked");
+        put("play", "تشغيل", "Play");
+        put("psp_ready_body", "يمكن تشغيل ألعاب PSP باستخدام تطبيق PPSSPP الرسمي المثبّت على جهازك.", "PSP games can be played with the official PPSSPP app installed on your device.");
+        put("psp_engine_missing_title", "محرك PSP غير مثبت", "PSP engine not installed");
+        put("psp_engine_missing_body", "ثبّت تطبيق PPSSPP الرسمي أولاً، ثم ارجع إلى NEXUS واضغط تشغيل.", "Install the official PPSSPP app, then return to NEXUS and tap Play.");
+        put("install_engine", "تنزيل PPSSPP", "Get PPSSPP");
+        put("launch_error", "تعذر فتح اللعبة. تحقق من الملف وصلاحية الوصول.", "Could not open the game. Check the file and access permission.");
+        put("coming_soon", "تشغيل هذه المنصة غير متاح في هذا الإصدار بعد.", "This platform is not playable in this version yet.");
     }
 
     private AppStrings() { }

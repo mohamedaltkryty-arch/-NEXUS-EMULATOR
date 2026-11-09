@@ -1,65 +1,42 @@
-# Engine source and integration plan
+# Engine integration status
 
-## What this repository contains now
+## PSP — playable through official PPSSPP
 
-The four official upstream projects are connected as Git submodules and pinned to exact commits recorded in `engines.lock.json`. This preserves upstream history and avoids copying thousands of upstream files into NEXUS.
+NEXUS includes a PSP launch adapter. It sends the selected SAF content URI to the official PPSSPP Android activity with a temporary read grant. Both standard and Gold package IDs are detected. If neither is installed, NEXUS displays an install prompt linking to the official PPSSPP download page.
 
-A submodule is a source reference, not a compiled engine. The current Android app remains a launcher/library shell. It cannot execute PSP, PS2, PS3, or Windows game files yet.
+This is an external-engine handoff, not an embedded PPSSPP native core. PPSSPP remains separately installed and owns rendering, audio, touch controls, settings and save states. NEXUS owns the game catalogue and import flow.
 
-## Sources and integration notes
+Supported formats routed to PPSSPP: ISO, CSO, PBP and ZSO. Title compatibility remains determined by PPSSPP.
 
-### PSP — PPSSPP
-- Source: https://github.com/hrydgard/ppsspp
-- License: GPL-2.0-or-later.
-- PPSSPP is a C++ PSP emulator with Android support.
-- PPSSPP does not require a separate PSP BIOS.
-- Integration work: review upstream Android Gradle/CMake targets, build arm64-v8a native libraries, define an Android intent/JNI bridge, then test game load, audio, rendering, touch input, controller input, and save paths.
+## PS2 — not yet playable in NEXUS
 
-### PS2 — ARMSX2
-- Source: https://github.com/ARMSX2/ARMSX2
-- License: GPL-3.0.
-- It is an ARM64-focused PCSX2 fork with Android support.
-- A BIOS dump from a legitimately owned PS2 is required.
-- Integration work: follow upstream build workflows and native dependency setup; do not assume that the app module can be copied into NEXUS without adapting its Gradle and native build configuration.
+Source: https://github.com/ARMSX2/ARMSX2  
+License: GPL-3.0.
 
-### Windows — Winlator
-- App source: https://github.com/brunodev85/winlator-app
-- License shown by its repository: LGPL-2.1.
-- Winlator uses Wine and Box86/Box64 plus graphics/runtime components such as Mesa, DXVK and VKD3D.
-- Integration work: import the full runtime/container lifecycle rather than merely launching an EXE. A Windows game generally requires its whole installed directory, runtime libraries, registry/container configuration, and per-game environment variables.
+ARMSX2 remains a pinned source submodule. It is not compiled or bundled into NEXUS. Future integration must follow its Android build, inspect all native dependencies, use a legally dumped PS2 BIOS and test actual games and thermal stability.
 
-### PS3 — ARMSX3
-- Source: https://github.com/ARMSX2/ARMSX3
-- License: GPL-2.0-only (check individual source headers for exceptions).
-- Upstream build requires Android SDK/NDK r27 or newer, CMake 3.30 or newer, and JDK 17. It supports arm64-v8a / armv8.2.
-- Upstream README describes an unstripped core library of roughly 1.3 GB and additional librashader/libadrenotools checkouts.
-- A legitimate PS3 firmware file is required and is not included.
-- Treat PS3 as experimental on the POCO X4 GT. The Dimensity 8100 / Mali-G610 configuration is not a guarantee of useful performance. Test actual titles and thermal stability before exposing a Play button.
+## PS3 — experimental source only
 
-## Device target
+Source: https://github.com/ARMSX2/ARMSX3  
+License: GPL-2.0-only (verify individual source headers).
 
-- POCO X4 GT
-- MediaTek Dimensity 8100
-- Mali-G610 MC6
-- arm64-v8a
-- 12 GB RAM and 256 GB storage (as supplied by the device owner)
+ARMSX3 remains a pinned source submodule. It is not compiled or bundled into NEXUS. Its large ARM64 native core and firmware requirements mean broad-device support cannot be promised. Future releases must report tested GPU/driver profiles and title-specific results.
+
+## Windows — runtime not yet integrated
+
+Source: https://github.com/brunodev85/winlator-app  
+License: LGPL-2.1 (verify all bundled runtime components).
+
+Windows games require their complete installed directories and a Wine/Box64/graphics runtime. NEXUS currently catalogues Windows folders only.
+
+## Device compatibility policy
+
+The NEXUS Java frontend targets Android 6.0+ and declares no ABI filter. The PSP runtime must match the device's supported Android version and CPU architecture. Actual compatibility depends on CPU instruction support, GPU driver/API, RAM, thermal limits and the specific game. A source submodule alone never marks a platform ready.
+
+## Game files and privacy
+
+NEXUS uses Android's Storage Access Framework. The PSP adapter shares only the user-selected content URI through a temporary read grant. It does not upload or duplicate game images. Do not bundle commercial games, console BIOS/firmware, PS3 keys or proprietary SDKs.
 
 ## Licensing boundary
 
-Keep upstream engines separately identifiable. Do not remove upstream copyright notices, license files, or attribution. Before distributing an APK that embeds or links modified engine code, review the exact license of each component and its dependencies and satisfy source-offer / corresponding-source obligations where applicable. ARMSX2 is GPL-3.0 while ARMSX3 is GPL-2.0-only; do not combine their code into one derivative work without a qualified compatibility review. Merely storing them as separate Git submodules does not merge their code.
-
-## Game files
-
-NEXUS does not download or bundle commercial games, BIOS images, firmware, keys, or proprietary SDKs. The owner imports files they are legally entitled to use. The launcher uses Android's Storage Access Framework so it does not need broad storage permissions.
-
-## Next integration milestone
-
-Integrate PPSSPP first:
-1. Review the pinned upstream Android build target and license notices.
-2. Produce and test arm64-v8a native libraries.
-3. Add a dedicated PSP engine adapter in NEXUS.
-4. Persist SAF URI permissions and pass readable file descriptors/paths safely.
-5. Run smoke tests for boot, audio, renderer, touch/controller input, save/load, pause/resume, and process recreation.
-6. Only mark PSP as available after all tests pass on the POCO X4 GT.
-
-Do not mark an engine as integrated based only on the presence of its source directory.
+Keep upstream projects separately identifiable. Do not remove license files, copyright notices or attribution. Review corresponding-source and redistribution requirements before distributing any APK that embeds or links upstream engine code. ARMSX2 (GPL-3.0) and ARMSX3 (GPL-2.0-only) must remain separate unless a qualified license review confirms compatibility.

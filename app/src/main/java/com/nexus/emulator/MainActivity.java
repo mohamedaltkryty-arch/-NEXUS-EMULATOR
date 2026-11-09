@@ -27,8 +27,7 @@ import android.widget.Toast;
 import com.nexus.emulator.catalog.GameFileClassifier;
 import com.nexus.emulator.data.GameDatabase;
 import com.nexus.emulator.data.SettingsStore;
-import com.nexus.emulator.engine.EngineDescriptor;
-import com.nexus.emulator.engine.EngineRegistry;
+import com.nexus.emulator.engine.PspEngine;
 import com.nexus.emulator.model.GameEntry;
 import com.nexus.emulator.util.AppStrings;
 
@@ -138,7 +137,6 @@ public final class MainActivity extends Activity {
         renderHeader();
         renderHero();
         renderStatistics();
-        renderEngineSummary();
         renderLibraryHeader();
         renderFilters();
         renderGameList();
@@ -182,43 +180,14 @@ public final class MainActivity extends Activity {
 
     private void renderStatistics() {
         LinearLayout stats = row();
-
         LinearLayout countCard = panel();
-        countCard.setPadding(dp(15), dp(12), dp(15), dp(12));
-        gameCount = text(Integer.toString(database.count()), 25, palette.primaryText, true);
+        countCard.setPadding(dp(16), dp(14), dp(16), dp(14));
+        gameCount = text(Integer.toString(database.count()), 26, palette.primaryText, true);
         countCard.addView(gameCount);
-        countCard.addView(text(isArabic() ? "لعبة في المكتبة" : "GAMES IN LIBRARY", 9, palette.secondaryText, true));
-        stats.addView(countCard, new LinearLayout.LayoutParams(0, dp(76), 1));
-
-        LinearLayout engineCard = panel();
-        engineCard.setPadding(dp(15), dp(12), dp(15), dp(12));
-        engineCard.addView(text("04", 25, palette.primaryText, true));
-        engineCard.addView(text(isArabic() ? "مصادر محركات" : "ENGINE SOURCES", 9, palette.secondaryText, true));
-        LinearLayout.LayoutParams engineParams = new LinearLayout.LayoutParams(0, dp(76), 1);
-        engineParams.leftMargin = isArabic() ? 0 : dp(10);
-        engineParams.rightMargin = isArabic() ? dp(10) : 0;
-        stats.addView(engineCard, engineParams);
-
+        countCard.addView(text(isArabic() ? "لعبة في مكتبتك" : "GAMES IN YOUR LIBRARY",
+                10, palette.secondaryText, true));
+        stats.addView(countCard, new LinearLayout.LayoutParams(-1, dp(84)));
         page.addView(stats, margin(-1, -2, 0, dp(18)));
-    }
-
-    private void renderEngineSummary() {
-        LinearLayout engine = panel();
-        engine.setOrientation(LinearLayout.HORIZONTAL);
-        engine.setGravity(Gravity.CENTER_VERTICAL);
-        engine.setPadding(dp(14), dp(13), dp(14), dp(13));
-
-        TextView status = text("●", 13, palette.accent, true);
-        engine.addView(status, margin(dp(20), -2, 0, 0));
-        LinearLayout copy = new LinearLayout(this);
-        copy.setOrientation(LinearLayout.VERTICAL);
-        copy.addView(text(s("engines_count"), 12, palette.primaryText, true));
-        copy.addView(text(s("engine_pending"), 10, palette.secondaryText, false), margin(-1, -2, dp(4), 0));
-        engine.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView arrow = text("›", 22, palette.secondaryText, true);
-        engine.addView(arrow);
-        engine.setOnClickListener(v -> showEngineCenter());
-        page.addView(engine, margin(-1, -2, 0, dp(22)));
     }
 
     private void renderLibraryHeader() {
@@ -341,6 +310,12 @@ public final class MainActivity extends Activity {
             renderLibraryItems();
         });
         card.addView(favorite, lp(dp(44), dp(44)));
+        if (GameFileClassifier.PSP.equals(game.getPlatform())) {
+            Button play = smallButton("▶", true);
+            play.setContentDescription(s("play"));
+            play.setOnClickListener(v -> launchPspGame(game));
+            card.addView(play, margin(dp(44), dp(44), 0, 0));
+        }
         card.setOnClickListener(v -> showGameDetails(game));
         return card;
     }
@@ -529,16 +504,15 @@ public final class MainActivity extends Activity {
     }
 
     private void showGameDetails(GameEntry game) {
-        EngineDescriptor engine = EngineRegistry.forPlatform(game.getPlatform());
-        String status = engine == null ? s("not_available") : s("source_only");
         StringBuilder message = new StringBuilder();
         message.append(s("platform")).append(": ").append(game.getPlatform()).append('\n');
-        message.append(s("file_type")).append(": ").append(game.getExtension().toUpperCase(Locale.ROOT)).append('\n');
+        message.append(s("file_type")).append(": ")
+                .append(game.getExtension().toUpperCase(Locale.ROOT)).append('\n');
         if (game.getSizeBytes() > 0) {
             message.append(s("size")).append(": ").append(formatSize(game.getSizeBytes())).append('\n');
         }
-        message.append(s("engine_status")).append(": ").append(status).append('\n');
-        message.append(s("engine_pending"));
+        boolean psp = GameFileClassifier.PSP.equals(game.getPlatform());
+        message.append('\n').append(psp ? s("psp_ready_body") : s("coming_soon"));
         if (GameFileClassifier.PC.equals(game.getPlatform())) {
             message.append("\n\n").append(s("pc_folder_tip"));
         }
@@ -546,12 +520,40 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(s("details") + " — " + game.getName())
                 .setMessage(message.toString())
-                .setPositiveButton(s("ok"), null)
+                .setPositiveButton(psp ? s("play") : s("ok"), (dialog, which) -> {
+                    if (psp) launchPspGame(game);
+                })
                 .setNeutralButton(s(game.isFavorite() ? "unfavorite" : "favorite"), (dialog, which) -> {
                     database.setFavorite(game.getId(), !game.isFavorite());
                     renderLibraryItems();
                 })
                 .setNegativeButton(s("remove"), (dialog, which) -> confirmRemove(game))
+                .show();
+    }
+
+    private void launchPspGame(GameEntry game) {
+        try {
+            PspEngine.launch(this, Uri.parse(game.getUri()), game.getName());
+        } catch (PspEngine.EngineNotInstalledException error) {
+            showPspInstallDialog();
+        } catch (Exception error) {
+            toast(s("launch_error"));
+        }
+    }
+
+    private void showPspInstallDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(s("psp_engine_missing_title"))
+                .setMessage(s("psp_engine_missing_body"))
+                .setPositiveButton(s("install_engine"), (dialog, which) -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW,
+                                Uri.parse("https://www.ppsspp.org/download/")));
+                    } catch (Exception ignored) {
+                        toast(s("launch_error"));
+                    }
+                })
+                .setNegativeButton(s("cancel"), null)
                 .show();
     }
 
@@ -567,38 +569,12 @@ public final class MainActivity extends Activity {
                 .show();
     }
 
-    private void showEngineCenter() {
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(20), dp(8), dp(20), dp(8));
-
-        for (EngineDescriptor engine : EngineRegistry.all()) {
-            LinearLayout item = new LinearLayout(this);
-            item.setOrientation(LinearLayout.VERTICAL);
-            item.setPadding(dp(12), dp(11), dp(12), dp(11));
-            item.setBackground(background(palette.surface, 13, palette.border));
-            item.addView(text(engine.getName() + "  •  " + engine.getPlatform(), 14, palette.primaryText, true));
-            item.addView(text(s("source_only"), 11, palette.secondaryText, false), margin(-1, -2, dp(5), 0));
-            content.addView(item, margin(-1, -2, 0, dp(8)));
-        }
-
-        ScrollView scroll = new ScrollView(this);
-        scroll.addView(content);
-        new AlertDialog.Builder(this)
-                .setTitle(s("engines"))
-                .setView(scroll)
-                .setPositiveButton(s("ok"), null)
-                .show();
-    }
-
     private void showSettings() {
         String[] options = {
                 s("language") + ": " + s(isArabic() ? "arabic" : "english"),
                 s("theme") + ": " + s(settings.isDarkTheme() ? "dark" : "light"),
-                s("engines"),
                 s("about")
         };
-
         new AlertDialog.Builder(this)
                 .setTitle(s("settings"))
                 .setItems(options, (dialog, which) -> {
@@ -609,8 +585,6 @@ public final class MainActivity extends Activity {
                         settings.setDarkTheme(!settings.isDarkTheme());
                         recreate();
                     } else if (which == 2) {
-                        showEngineCenter();
-                    } else {
                         showAbout();
                     }
                 })
