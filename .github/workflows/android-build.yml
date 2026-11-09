@@ -14,8 +14,9 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: Unit tests, Android build and emulator smoke test
+    name: Unit tests and APK build
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - name: Checkout NEXUS
         uses: actions/checkout@v4
@@ -57,20 +58,6 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
 
-      - name: Install and launch on Android emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          arch: x86_64
-          profile: pixel_2
-          script: |
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
-            adb shell am force-stop com.nexus.emulator.debug
-            adb shell am start -W -n com.nexus.emulator.debug/com.nexus.emulator.MainActivity
-            sleep 3
-            adb shell dumpsys activity activities | grep -q "com.nexus.emulator.MainActivity"
-            adb shell pm path com.nexus.emulator.debug
-
       - name: Calculate APK checksum
         run: sha256sum app/build/outputs/apk/debug/*.apk
 
@@ -81,3 +68,29 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
+
+  emulator-smoke:
+    name: Install and launch on Android emulator
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download tested APK
+        uses: actions/download-artifact@v4
+        with:
+          name: nexus-emulator-debug-apk
+          path: artifacts
+
+      - name: Install and launch app
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            adb install -r artifacts/app-debug.apk
+            adb shell am force-stop com.nexus.emulator.debug
+            adb shell am start -W -n com.nexus.emulator.debug/com.nexus.emulator.MainActivity
+            sleep 3
+            adb shell dumpsys activity activities | grep -q "com.nexus.emulator.MainActivity"
+            adb shell pm path com.nexus.emulator.debug
