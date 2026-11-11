@@ -2,7 +2,7 @@ name: Build and smoke-test NEXUS
 
 on:
   push:
-    branches: [main]
+    branches: [main, nexus-redesign]
   workflow_dispatch:
 
 permissions:
