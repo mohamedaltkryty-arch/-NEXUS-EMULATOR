@@ -13,7 +13,7 @@
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:icon="@drawable/nexus_launcher"
-        android:label="NEXUS EMULATOR"
+        android:label="NEXUS"
         android:theme="@style/AppTheme"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
