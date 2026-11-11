@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import com.nexus.emulator.catalog.GameFileClassifier;
 import com.nexus.emulator.model.GameEntry;
 
 import java.util.ArrayList;
@@ -70,7 +71,7 @@ public final class GameDatabase extends SQLiteOpenHelper {
     public synchronized List<GameEntry> getAll() {
         List<GameEntry> result = new ArrayList<>();
         String order = COL_FAVORITE + " DESC, " + COL_ADDED + " DESC, " + COL_NAME + " COLLATE NOCASE ASC";
-        try (Cursor cursor = getReadableDatabase().query(TABLE_GAMES, null, null, null, null, null, order)) {
+        try (Cursor cursor = getReadableDatabase().query(TABLE_GAMES, null, COL_PLATFORM + "=?", new String[]{GameFileClassifier.PSP}, null, null, order)) {
             while (cursor.moveToNext()) result.add(read(cursor));
         }
         return result;
@@ -89,7 +90,7 @@ public final class GameDatabase extends SQLiteOpenHelper {
     }
 
     public synchronized int count() {
-        try (Cursor cursor = getReadableDatabase().rawQuery("SELECT COUNT(*) FROM " + TABLE_GAMES, null)) {
+        try (Cursor cursor = getReadableDatabase().rawQuery("SELECT COUNT(*) FROM " + TABLE_GAMES + " WHERE " + COL_PLATFORM + "=?", new String[]{GameFileClassifier.PSP})) {
             return cursor.moveToFirst() ? cursor.getInt(0) : 0;
         }
     }
