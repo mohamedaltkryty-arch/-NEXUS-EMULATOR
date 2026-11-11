@@ -7,6 +7,9 @@ import java.util.Locale;
 
 public final class GameFileClassifier {
     public static final String PSP = "PSP";
+    public static final String PC = "PC";
+    public static final String PS2 = "PS2";
+    public static final String PS3 = "PS3";
     public static final String UNSUPPORTED = "UNSUPPORTED";
 
     private static final List<String> PSP_FORMATS =
