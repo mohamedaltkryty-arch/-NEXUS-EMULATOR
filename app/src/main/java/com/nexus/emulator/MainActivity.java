@@ -42,9 +42,8 @@ public final class MainActivity extends Activity {
     private SettingsStore settings;
     private LinearLayout page;
     private LinearLayout gameList;
+    private LinearLayout statistics;
     private EditText searchField;
-    private TextView totalCount;
-    private TextView favoriteCount;
     private TextView runtimeDot;
     private TextView runtimeState;
     private Button runtimeAction;
@@ -143,6 +142,7 @@ public final class MainActivity extends Activity {
         scroll.setBackgroundColor(palette.background);
 
         page = column();
+        statistics = null;
         page.setPadding(dp(20), dp(17), dp(20), dp(28));
         page.setBackgroundColor(palette.background);
         scroll.addView(page);
@@ -252,7 +252,9 @@ public final class MainActivity extends Activity {
             if (game.isFavorite()) favorites++;
         }
 
+        if (statistics != null) page.removeView(statistics);
         LinearLayout stats = row();
+        statistics = stats;
         stats.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout totalCard = statCard(Integer.toString(games.size()), s("total_games"), "▣");
         LinearLayout favoriteCard = statCard(Integer.toString(favorites), s("favorite_games"), "★");
@@ -260,7 +262,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams favoriteParams = new LinearLayout.LayoutParams(0, dp(78), 1);
         favoriteParams.leftMargin = dp(9);
         stats.addView(favoriteCard, favoriteParams);
-        page.addView(stats, margin(-1, -2, 0, dp(21)));
+        page.addView(stats, 3, margin(-1, -2, 0, dp(21)));
     }
 
     private LinearLayout statCard(String value, String caption, String glyph) {
