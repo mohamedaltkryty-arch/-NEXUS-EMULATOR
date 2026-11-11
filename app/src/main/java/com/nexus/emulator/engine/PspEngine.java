@@ -55,7 +55,6 @@ public final class PspEngine {
             throw new IllegalArgumentException("A readable content URI is required.");
         }
 
-        PackageManager manager = activity.getPackageManager();
         boolean installed = false;
         String[][] candidates = {
                 {FREE_PACKAGE, FREE_ACTIVITY},

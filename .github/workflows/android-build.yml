@@ -94,3 +94,16 @@ jobs:
             sleep 3
             adb shell dumpsys activity activities | grep -q "com.nexus.emulator.MainActivity"
             adb shell pm path com.nexus.emulator.debug
+            adb shell uiautomator dump /sdcard/nexus-window.xml
+            adb pull /sdcard/nexus-window.xml artifacts/nexus-window.xml
+            grep -q "NEXUS" artifacts/nexus-window.xml
+            adb shell screencap -p /sdcard/nexus-home.png
+            adb pull /sdcard/nexus-home.png artifacts/nexus-home.png
+
+      - name: Upload UI smoke screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-ui-smoke
+          path: artifacts/nexus-home.png
+          if-no-files-found: error
+          retention-days: 14

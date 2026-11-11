@@ -17,6 +17,7 @@ import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -46,6 +47,7 @@ public final class MainActivity extends Activity {
     private EditText searchField;
     private TextView runtimeDot;
     private TextView runtimeState;
+    private TextView runtimeDescription;
     private Button runtimeAction;
     private Button allFilter;
     private Button favoritesFilter;
@@ -139,6 +141,11 @@ public final class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
+        scroll.setOnApplyWindowInsetsListener((view, insets) -> {
+            view.setPadding(view.getPaddingLeft(), insets.getSystemWindowInsetTop(),
+                    view.getPaddingRight(), insets.getSystemWindowInsetBottom());
+            return insets;
+        });
         scroll.setBackgroundColor(palette.background);
 
         page = column();
@@ -230,8 +237,8 @@ public final class MainActivity extends Activity {
         content.addView(runtimeAction, lp(-2, dp(44)));
 
         card.addView(content);
-        card.addView(text(s("runtime_ready_body"), 11, palette.secondaryText, false),
-                margin(-1, -2, dp(7), 0));
+        runtimeDescription = text(s("runtime_ready_body"), 11, palette.secondaryText, false);
+        card.addView(runtimeDescription, margin(-1, -2, dp(7), 0));
         page.addView(card, margin(-1, -2, 0, dp(15)));
         updateRuntimeCard();
     }
@@ -242,6 +249,7 @@ public final class MainActivity extends Activity {
         runtimeState.setText(s(installed ? "runtime_ready" : "runtime_missing"));
         runtimeState.setTextColor(installed ? palette.success : palette.warning);
         runtimeDot.setTextColor(installed ? palette.success : palette.warning);
+        runtimeDescription.setText(s(installed ? "runtime_ready_body" : "runtime_missing_body"));
         runtimeAction.setVisibility(installed ? View.GONE : View.VISIBLE);
     }
 
