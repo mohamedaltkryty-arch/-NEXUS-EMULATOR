@@ -311,9 +311,10 @@ public final class MainActivity extends Activity {
             explanation.setGravity(Gravity.CENTER);
             explanation.setLineSpacing(dp(3), 1.0f);
             empty.addView(explanation, margin(-1, -2, dp(9), 0));
-            Button importButton = smallButton(totalPsp == 0 ? s("import") : s("clear_search"), true);
+            final boolean libraryIsEmpty = totalPsp == 0;
+            Button importButton = smallButton(libraryIsEmpty ? s("import") : s("clear_search"), true);
             importButton.setOnClickListener(v -> {
-                if (totalPsp == 0) showImportOptions();
+                if (libraryIsEmpty) showImportOptions();
                 else {
                     activeFilter = "ALL";
                     if (searchField != null) searchField.setText("");
@@ -571,7 +572,7 @@ public final class MainActivity extends Activity {
                         try {
                             getContentResolver().releasePersistableUriPermission(
                                     Uri.parse(game.getUri()), Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        } catch (SecurityException ignored) {
+                        } catch (SecurityException | IllegalArgumentException ignored) {
                             // The provider may have already revoked the grant.
                         }
                         renderLibraryItems();
