@@ -53,5 +53,5 @@ jobs:
           test -f app/build.gradle
           test -f settings.gradle
           ! grep -q 'android.permission.INTERNET' app/src/main/AndroidManifest.xml
-      - name: Run complete JVM unit test suite
-        run: gradle --no-daemon :app:testDebugUnitTest
+      - name: Run JVM tests and Android lint
+        run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug
