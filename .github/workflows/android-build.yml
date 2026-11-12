@@ -112,12 +112,12 @@ jobs:
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
           mkdir -p artifacts
-          cp "$APK" "artifacts/NEXUS-EMULATOR-v0.8.0-debug.apk"
-          sha256sum "artifacts/NEXUS-EMULATOR-v0.8.0-debug.apk" | tee artifacts/SHA256SUMS.txt
+          cp "$APK" "artifacts/NEXUS-EMULATOR-v0.8.1.apk"
+          sha256sum "artifacts/NEXUS-EMULATOR-v0.8.1.apk" | tee artifacts/SHA256SUMS.txt
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: nexus-emulator-v0.8.0-debug-apk
+          name: nexus-emulator-v0.8.1-apk
           path: artifacts/*
           if-no-files-found: error
           retention-days: 14
@@ -132,7 +132,7 @@ jobs:
       - name: Download verified APK
         uses: actions/download-artifact@v4
         with:
-          name: nexus-emulator-v0.8.0-debug-apk
+          name: nexus-emulator-v0.8.1-apk
           path: artifacts
       - name: Install and launch NEXUS
         uses: reactivecircus/android-emulator-runner@v2
@@ -145,19 +145,19 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
-            timeout 120s adb install -r artifacts/NEXUS-EMULATOR-v0.8.0-debug.apk
-            timeout 30s adb shell am force-stop com.nexus.emulator.debug
-            timeout 60s adb shell am start -W -n com.nexus.emulator.debug/com.nexus.emulator.MainActivity
+            timeout 120s adb install -r artifacts/NEXUS-EMULATOR-v0.8.1.apk
+            timeout 30s adb shell am force-stop com.nexus.emulator.v081
+            timeout 60s adb shell am start -W -n com.nexus.emulator.v081/com.nexus.emulator.MainActivity
             sleep 3
             timeout 30s adb shell dumpsys activity activities | grep -q "com.nexus.emulator.MainActivity"
-            timeout 30s adb shell pm path com.nexus.emulator.debug
+            timeout 30s adb shell pm path com.nexus.emulator.v081
             mkdir -p artifacts
             timeout 30s adb exec-out screencap -p > artifacts/nexus-home.png
             test -s artifacts/nexus-home.png
       - name: Upload emulator UI evidence
         uses: actions/upload-artifact@v4
         with:
-          name: nexus-emulator-v0.8.0-smoke-evidence
+          name: nexus-emulator-v0.8.1-smoke-evidence
           path: artifacts/nexus-*
           if-no-files-found: error
           retention-days: 14

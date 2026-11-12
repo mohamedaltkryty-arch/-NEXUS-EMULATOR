@@ -10,8 +10,8 @@ android {
         applicationId 'com.nexus.emulator'
         minSdk 23
         targetSdk 36
-        versionCode 8
-        versionName '0.8.0'
+        versionCode 9
+        versionName '0.8.1'
     }
 
     compileOptions {
@@ -25,7 +25,7 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix '.debug'
+            applicationIdSuffix '.v081'
             versionNameSuffix '-debug'
         }
         release {
