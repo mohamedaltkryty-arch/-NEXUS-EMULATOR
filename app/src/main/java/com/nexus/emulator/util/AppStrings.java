@@ -63,6 +63,16 @@ public final class AppStrings {
         put("install_engine", "تنزيل PPSSPP", "Get PPSSPP");
         put("launch_error", "تعذر فتح اللعبة. تحقق من الملف وصلاحية الوصول.", "Could not open the game. Check the file and access permission.");
         put("coming_soon", "تشغيل هذه المنصة غير متاح في هذا الإصدار بعد.", "This platform is not playable in this version yet.");
+        put("favorites", "المفضلة", "Favorites");
+        put("games_in_library", "لعبة في مكتبتك", "GAMES IN YOUR LIBRARY");
+        put("local_library", "محفوظة على جهازك", "SAVED ON DEVICE");
+        put("no_matches_title", "ما لقينا نتائج", "No matching games");
+        put("no_matches_body", "جرّب كلمة بحث أخرى أو ارجع إلى كل الألعاب.", "Try another search or switch back to all games.");
+        put("clear_search", "عرض كل الألعاب", "Show all games");
+        put("unknown_game", "لعبة PSP", "PSP Game");
+        put("file_picker_error", "تعذر فتح مدير الملفات على هذا الجهاز.", "Could not open the file picker on this device.");
+        put("no_files_selected", "لم يتم اختيار أي ملف.", "No files were selected.");
+        put("import_error", "تعذر إضافة الملف. تحقق من مساحة الجهاز وصلاحية الوصول.", "Could not add this file. Check device storage and file access.");
     }
 
     private AppStrings() { }

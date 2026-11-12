@@ -1,74 +1,40 @@
 # NEXUS — Product specification
 
 ## Vision
+A focused Android PSP library companion that makes a personally owned game collection easy to import, organize and launch without advertising unsupported platforms as playable.
 
-NEXUS is a clean Android game library with a platform-aware launch layer. Its advantage is one consistent catalogue and import flow, not a claim to outperform specialist emulators.
+## MVP capabilities
+- Import PSP ISO, CSO, PBP and ZSO files through the Android Storage Access Framework.
+- Multi-select import and persisted read access where the document provider grants it.
+- Local SQLite metadata store.
+- Search, all/favorites filters, game details, remove and launch handoff.
+- Arabic RTL default, English, dark and light themes.
+- Official PPSSPP Android app handoff.
+- No account, telemetry, ads, remote API or broad storage permission.
 
-## MVP
+## Excluded from active UI
+PS2, PS3 and Windows game engines are not integrated. Legacy entries may remain in storage for forward compatibility but are hidden from the current PSP library and cannot be newly imported through the active UI.
 
-- Local SQLite game library.
-- SAF file/folder import with persisted URI grants.
-- Search, platform filters, favorites and game details.
-- Arabic RTL by default, English, dark and light themes.
-- PSP launch handoff to official PPSSPP (standard or Gold).
-- Honest readiness: PS2, PS3 and Windows are catalogue-only until runtimes are integrated.
-- No login, telemetry, ads, remote API or broad storage access.
+## Architecture
+- Android Native Java 17.
+- Android SDK 35, minSdk 23, targetSdk 35.
+- SQLiteOpenHelper for local catalogue.
+- SharedPreferences for language/theme.
+- Android Storage Access Framework for user-selected document URIs.
+- Dedicated PSP format policy and PPSSPP launch adapter.
+- GitHub Actions verifies JVM tests before APK build and emulator smoke test.
 
-## Roadmap
-
-1. PSP launch bridge and device compatibility handling.
-2. PS2 runtime integration with BIOS selection and device tests.
-3. Winlator container/runtime integration for full Windows game folders.
-4. Experimental PS3 runtime only after toolchain, storage and device-profile testing.
-5. Release signing, database migrations, controller profiles and title compatibility reporting.
-
-## Technical stack
-
-- Android Java 17, Android SDK 35.
-- Android 6.0+ (minSdk 23).
-- SQLiteOpenHelper for the local catalogue.
-- SharedPreferences for user settings.
-- Storage Access Framework for user-authorized game files.
-- Native engines isolated behind platform adapters.
-- GitHub Actions for JVM tests, APK build and Android emulator smoke launch.
-
-## Cross-device policy
-
-The Java UI has no ABI restriction and can be installed on supported ARM32, ARM64 and x86/x86_64 Android builds. Native engines have independent CPU/GPU/API requirements. Performance is title- and device-dependent; universal compatibility is not a technically valid promise.
-
-## Local data model
-
-`games` table:
-- `_id INTEGER PRIMARY KEY AUTOINCREMENT`
-- `name TEXT NOT NULL`
-- `platform TEXT NOT NULL`
-- `uri TEXT NOT NULL UNIQUE`
-- `extension TEXT NOT NULL`
-- `size_bytes INTEGER NOT NULL DEFAULT 0`
-- `added_at INTEGER NOT NULL`
-- `favorite INTEGER NOT NULL DEFAULT 0`
-
-Settings:
-- `language_arabic BOOLEAN`
-- `theme_dark BOOLEAN`
+## Data model
+Games rows contain id, name, platform, uri, extension, size_bytes, added_at and favorite.
 
 ## Security and privacy
-
-- No account required.
 - No INTERNET permission.
-- SAF grants are scoped to user-selected files.
-- Database APIs use parameterized queries.
-- Android backup is disabled.
-- No WebView, telemetry or file upload.
-- PPSSPP receives only a temporary read grant for the selected game URI.
+- No account/authentication surface.
+- Persist only the read URI grant returned by the document provider.
+- No file uploads or copying into app-managed public storage.
+- Parameterized SQL for library mutations.
+- App backup disabled.
+- External PPSSPP process receives only the selected URI read grant.
 
-## Performance and failure handling
-
-- Library queries operate on local metadata.
-- Only supported PSP game formats are routed to PPSSPP.
-- Missing runtime, invalid URI, lost document grant or missing file produces a user-facing error.
-- Heavy native engines are not loaded into the NEXUS process.
-
-## Testing
-
-CI runs JVM tests and a clean install/launch smoke test on x86_64 Android emulator. These validate the frontend and launch boundary, not compatibility for every game or external emulator.
+## Known boundaries
+The app does not embed emulator runtimes. PSP performance depends on the selected PPSSPP build, device SoC/GPU, Android version, thermal state and game-specific compatibility. No universal game/device compatibility claim is made.

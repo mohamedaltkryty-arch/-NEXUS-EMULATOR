@@ -13,44 +13,38 @@ public final class GameFileClassifier {
     public static final String AMBIGUOUS_DISC = "DISC";
     public static final String UNSUPPORTED = "UNSUPPORTED";
 
+    private static final List<String> PSP_EXTENSIONS = Collections.unmodifiableList(
+            Arrays.asList("iso", "cso", "pbp", "zso"));
+
     private GameFileClassifier() { }
 
     public static String extensionOf(String displayName) {
         if (displayName == null) return "";
-        int slash = Math.max(displayName.lastIndexOf('/'), displayName.lastIndexOf('\\'));
-        String leaf = displayName.substring(slash + 1);
+        String name = displayName.trim();
+        int slash = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
+        String leaf = name.substring(slash + 1);
         int dot = leaf.lastIndexOf('.');
         if (dot <= 0 || dot == leaf.length() - 1) return "";
-        return leaf.substring(dot + 1).toLowerCase(Locale.ROOT);
+        return leaf.substring(dot + 1).trim().toLowerCase(Locale.ROOT);
     }
 
     public static String classify(String extension) {
-        String ext = extension == null ? "" : extension.toLowerCase(Locale.ROOT);
-        switch (ext) {
-            case "exe":
-            case "msi":
-                return PC;
-            case "pbp":
-            case "zso":
-                return PSP;
-            case "pkg":
-                return PS3;
-            case "chd":
-                return PS2;
-            case "iso":
-            case "bin":
-            case "cso":
-                return AMBIGUOUS_DISC;
-            default:
-                return UNSUPPORTED;
-        }
+        return isSupportedPspExtension(extension) ? PSP : UNSUPPORTED;
     }
 
+    public static boolean isSupportedPspExtension(String extension) {
+        if (extension == null) return false;
+        String ext = extension.trim().toLowerCase(Locale.ROOT);
+        return PSP_EXTENSIONS.contains(ext);
+    }
+
+    public static List<String> supportedPspExtensions() { return PSP_EXTENSIONS; }
+
     public static List<String> supportedDiscPlatforms() {
-        return Collections.unmodifiableList(Arrays.asList(PSP, PS2, PS3));
+        return Collections.singletonList(PSP);
     }
 
     public static boolean isSupportedPlatform(String platform) {
-        return PC.equals(platform) || PSP.equals(platform) || PS2.equals(platform) || PS3.equals(platform);
+        return PSP.equals(platform);
     }
 }

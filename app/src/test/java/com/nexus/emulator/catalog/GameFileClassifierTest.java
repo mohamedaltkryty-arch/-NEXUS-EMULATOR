@@ -5,31 +5,27 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public final class GameFileClassifierTest {
-    @Test public void extractsExtensionFromFileName() {
+    @Test
+    public void extractsExtensionFromFileName() {
         assertEquals("iso", GameFileClassifier.extensionOf("God of War.ISO"));
         assertEquals("exe", GameFileClassifier.extensionOf("C:\\Games\\game.exe"));
+        assertEquals("", GameFileClassifier.extensionOf("No extension"));
+        assertEquals("", GameFileClassifier.extensionOf("archive."));
     }
 
-    @Test public void detectsWindowsInstallers() {
-        assertEquals(GameFileClassifier.PC, GameFileClassifier.classify("exe"));
-        assertEquals(GameFileClassifier.PC, GameFileClassifier.classify("MSI"));
-    }
-
-    @Test public void detectsPspFormats() {
+    @Test
+    public void recognizesOnlyPspFormats() {
+        assertEquals(GameFileClassifier.PSP, GameFileClassifier.classify("ISO"));
+        assertEquals(GameFileClassifier.PSP, GameFileClassifier.classify("cso"));
         assertEquals(GameFileClassifier.PSP, GameFileClassifier.classify("pbp"));
-        assertEquals(GameFileClassifier.PSP, GameFileClassifier.classify("zso"));
+        assertEquals(GameFileClassifier.PSP, GameFileClassifier.classify("zSo"));
+        assertEquals(GameFileClassifier.UNSUPPORTED, GameFileClassifier.classify("exe"));
+        assertEquals(GameFileClassifier.UNSUPPORTED, GameFileClassifier.classify("chd"));
     }
 
-    @Test public void keepsAmbiguousDiscFormatsForManualPlatformSelection() {
-        assertEquals(GameFileClassifier.AMBIGUOUS_DISC, GameFileClassifier.classify("iso"));
-        assertEquals(GameFileClassifier.AMBIGUOUS_DISC, GameFileClassifier.classify("bin"));
-        assertEquals(GameFileClassifier.AMBIGUOUS_DISC, GameFileClassifier.classify("cso"));
-        assertTrue(GameFileClassifier.supportedDiscPlatforms().contains(GameFileClassifier.PS2));
-    }
-
-    @Test public void rejectsUnknownExtensions() {
-        assertEquals(GameFileClassifier.UNSUPPORTED, GameFileClassifier.classify("pdf"));
-        assertEquals(GameFileClassifier.UNSUPPORTED, GameFileClassifier.classify(""));
-        assertEquals(GameFileClassifier.UNSUPPORTED, GameFileClassifier.classify(null));
+    @Test
+    public void exposesImmutablePspAllowList() {
+        assertEquals(4, GameFileClassifier.supportedPspExtensions().size());
+        assertTrue(GameFileClassifier.supportedPspExtensions().contains("iso"));
     }
 }

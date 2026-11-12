@@ -7,7 +7,9 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.ParcelFileDescriptor;
 
+import java.io.FileNotFoundException;
 import java.util.Locale;
 
 public final class PspEngine {
@@ -21,7 +23,7 @@ public final class PspEngine {
 
     public static boolean supportsGame(String platform, String extension) {
         if (platform == null || extension == null || !"PSP".equals(platform)) return false;
-        String ext = extension.toLowerCase(Locale.ROOT);
+        String ext = extension.trim().toLowerCase(Locale.ROOT);
         return "iso".equals(ext) || "cso".equals(ext) || "pbp".equals(ext) || "zso".equals(ext);
     }
 
@@ -29,6 +31,13 @@ public final class PspEngine {
             throws EngineNotInstalledException {
         if (activity == null || gameUri == null || !"content".equals(gameUri.getScheme())) {
             throw new IllegalArgumentException("A readable content URI is required.");
+        }
+
+        try (ParcelFileDescriptor descriptor =
+                     activity.getContentResolver().openFileDescriptor(gameUri, "r")) {
+            if (descriptor == null) throw new FileNotFoundException("Game file is no longer readable.");
+        } catch (Exception error) {
+            throw new IllegalStateException("The selected game file is no longer accessible.", error);
         }
 
         PackageManager manager = activity.getPackageManager();
@@ -52,7 +61,7 @@ public final class PspEngine {
                 activity.startActivity(intent);
                 return;
             } catch (ActivityNotFoundException unavailable) {
-                // Try the other official package variant.
+                // Try the other officially installed package.
             }
         }
         if (!installed) throw new EngineNotInstalledException();

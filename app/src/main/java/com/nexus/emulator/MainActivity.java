@@ -9,7 +9,6 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -37,7 +36,6 @@ import java.util.Locale;
 
 public final class MainActivity extends Activity {
     private static final int REQUEST_IMPORT_FILES = 4101;
-    private static final int REQUEST_IMPORT_FOLDER = 4102;
 
     private GameDatabase database;
     private SettingsStore settings;
@@ -48,6 +46,7 @@ public final class MainActivity extends Activity {
     private String activeFilter = "ALL";
     private final List<Uri> pendingFiles = new ArrayList<>();
     private int pendingFileIndex;
+    private int pendingGrantFlags;
 
     private static final class Palette {
         final int background;
@@ -61,23 +60,23 @@ public final class MainActivity extends Activity {
 
         Palette(boolean dark) {
             if (dark) {
-                background = Color.rgb(10, 12, 19);
-                surface = Color.rgb(21, 26, 38);
-                border = Color.rgb(42, 49, 65);
-                primaryText = Color.rgb(245, 247, 252);
-                secondaryText = Color.rgb(148, 158, 178);
-                accent = Color.rgb(133, 112, 255);
-                accentSoft = Color.rgb(43, 36, 77);
-                field = Color.rgb(25, 31, 45);
+                background = Color.rgb(8, 12, 22);
+                surface = Color.rgb(17, 25, 42);
+                border = Color.rgb(36, 49, 72);
+                primaryText = Color.rgb(244, 247, 255);
+                secondaryText = Color.rgb(151, 164, 189);
+                accent = Color.rgb(113, 96, 255);
+                accentSoft = Color.rgb(42, 39, 82);
+                field = Color.rgb(18, 29, 48);
             } else {
-                background = Color.rgb(245, 247, 251);
+                background = Color.rgb(244, 247, 252);
                 surface = Color.WHITE;
-                border = Color.rgb(224, 229, 239);
-                primaryText = Color.rgb(24, 29, 43);
-                secondaryText = Color.rgb(101, 111, 132);
-                accent = Color.rgb(94, 75, 220);
-                accentSoft = Color.rgb(238, 234, 255);
-                field = Color.rgb(235, 239, 247);
+                border = Color.rgb(222, 229, 241);
+                primaryText = Color.rgb(19, 27, 45);
+                secondaryText = Color.rgb(100, 114, 139);
+                accent = Color.rgb(91, 75, 224);
+                accentSoft = Color.rgb(237, 234, 255);
+                field = Color.rgb(235, 240, 248);
             }
         }
     }
@@ -152,50 +151,73 @@ public final class MainActivity extends Activity {
 
         LinearLayout branding = new LinearLayout(this);
         branding.setOrientation(LinearLayout.VERTICAL);
-        TextView name = text("NEXUS", 25, palette.primaryText, true);
-        name.setLetterSpacing(0.08f);
+        TextView name = text("NEXUS", 27, palette.primaryText, true);
+        name.setLetterSpacing(0.12f);
         branding.addView(name);
-        branding.addView(text(s("tagline"), 10, palette.secondaryText, false), lp(-2, dp(18)));
+        TextView caption = text(isArabic() ? "مكتبة ألعاب PSP الخاصة بك" : "YOUR PSP GAME LIBRARY",
+                9, palette.secondaryText, true);
+        caption.setLetterSpacing(0.10f);
+        branding.addView(caption, lp(-2, dp(18)));
         header.addView(branding, new LinearLayout.LayoutParams(0, -2, 1));
 
         Button settingsButton = smallButton("⚙", false);
         settingsButton.setContentDescription(s("settings"));
         settingsButton.setOnClickListener(v -> showSettings());
-        header.addView(settingsButton, lp(dp(48), dp(48)));
-        page.addView(header, margin(-1, -2, 0, dp(22)));
+        header.addView(settingsButton, lp(dp(46), dp(46)));
+        page.addView(header, margin(-1, -2, 0, dp(18)));
     }
 
     private void renderHero() {
         LinearLayout hero = panel();
-        hero.setPadding(dp(18), dp(18), dp(18), dp(18));
-        TextView badge = text("NEXUS  /  GAME CENTER", 10, palette.accent, true);
+        GradientDrawable heroBackground = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(44, 47, 112), Color.rgb(25, 35, 65)});
+        heroBackground.setCornerRadius(dp(24));
+        hero.setBackground(heroBackground);
+        hero.setPadding(dp(20), dp(20), dp(20), dp(20));
+
+        TextView badge = text("NEXUS  /  PSP COLLECTION", 10, Color.rgb(205, 202, 255), true);
+        badge.setLetterSpacing(0.10f);
         hero.addView(badge);
-        hero.addView(text(s("hero_title"), 24, palette.primaryText, true), margin(-1, -2, dp(9), dp(6)));
-        hero.addView(text(s("hero_body"), 13, palette.secondaryText, false));
+        hero.addView(text(s("hero_title"), 23, Color.WHITE, true), margin(-1, -2, dp(12), dp(7)));
+        TextView body = text(s("hero_body"), 13, Color.rgb(211, 219, 242), false);
+        body.setLineSpacing(dp(2), 1.0f);
+        hero.addView(body);
         Button importButton = primaryButton("＋  " + s("import"));
+        importButton.setTextColor(Color.rgb(28, 31, 69));
+        importButton.setBackground(background(Color.WHITE, 14, Color.WHITE));
         importButton.setOnClickListener(v -> showImportOptions());
         hero.addView(importButton, margin(-1, dp(50), dp(18), 0));
-        page.addView(hero, margin(-1, -2, 0, dp(16)));
+        page.addView(hero, margin(-1, -2, 0, dp(18)));
     }
 
     private void renderStatistics() {
-        LinearLayout stats = row();
-        LinearLayout countCard = panel();
-        countCard.setPadding(dp(16), dp(14), dp(16), dp(14));
-        gameCount = text(Integer.toString(database.count()), 26, palette.primaryText, true);
-        countCard.addView(gameCount);
-        countCard.addView(text(isArabic() ? "لعبة في مكتبتك" : "GAMES IN YOUR LIBRARY",
-                10, palette.secondaryText, true));
-        stats.addView(countCard, new LinearLayout.LayoutParams(-1, dp(84)));
-        page.addView(stats, margin(-1, -2, 0, dp(18)));
+        LinearLayout stats = panel();
+        stats.setOrientation(LinearLayout.HORIZONTAL);
+        stats.setGravity(Gravity.CENTER_VERTICAL);
+        stats.setPadding(dp(17), dp(13), dp(17), dp(13));
+
+        LinearLayout countDetails = new LinearLayout(this);
+        countDetails.setOrientation(LinearLayout.VERTICAL);
+        gameCount = text("0", 25, palette.primaryText, true);
+        countDetails.addView(gameCount);
+        countDetails.addView(text(s("games_in_library"), 10, palette.secondaryText, true));
+        stats.addView(countDetails, new LinearLayout.LayoutParams(0, -2, 1));
+
+        TextView platform = text("PSP", 12, palette.accent, true);
+        platform.setGravity(Gravity.CENTER);
+        platform.setBackground(background(palette.accentSoft, 12, palette.border));
+        stats.addView(platform, lp(dp(62), dp(42)));
+        page.addView(stats, margin(-1, -2, 0, dp(22)));
     }
 
     private void renderLibraryHeader() {
         LinearLayout header = row();
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.addView(text(s("library"), 16, palette.primaryText, true), new LinearLayout.LayoutParams(0, -2, 1));
-        header.addView(text(isArabic() ? "محلياً على جهازك" : "ON THIS DEVICE", 9, palette.secondaryText, true));
-        page.addView(header, margin(-1, -2, 0, dp(10)));
+        header.addView(text(s("library"), 18, palette.primaryText, true),
+                new LinearLayout.LayoutParams(0, -2, 1));
+        header.addView(text(s("local_library"), 9, palette.secondaryText, true));
+        page.addView(header, margin(-1, -2, 0, dp(11)));
 
         searchField = new EditText(this);
         searchField.setSingleLine(true);
@@ -203,10 +225,11 @@ public final class MainActivity extends Activity {
         searchField.setTextColor(palette.primaryText);
         searchField.setHintTextColor(palette.secondaryText);
         searchField.setHint(s("search"));
-        searchField.setPadding(dp(15), 0, dp(15), 0);
-        searchField.setBackground(background(palette.field, 14, palette.border));
+        searchField.setPadding(dp(16), 0, dp(16), 0);
+        searchField.setBackground(background(palette.field, 15, palette.border));
         searchField.setLayoutDirection(isArabic() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
-        page.addView(searchField, margin(-1, dp(50), 0, dp(12)));
+        searchField.setCompoundDrawablePadding(dp(8));
+        page.addView(searchField, margin(-1, dp(52), 0, dp(13)));
         searchField.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence value, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence value, int start, int before, int count) { renderLibraryItems(); }
@@ -217,33 +240,33 @@ public final class MainActivity extends Activity {
     private void renderFilters() {
         HorizontalScrollView horizontal = new HorizontalScrollView(this);
         horizontal.setHorizontalScrollBarEnabled(false);
+        horizontal.setFillViewport(false);
         LinearLayout chips = row();
         String[][] values = {
-                {"ALL", s("all")}, {"PC", s("pc")}, {"PSP", s("psp")},
-                {"PS2", s("ps2")}, {"PS3", s("ps3")}
+                {"ALL", s("all")},
+                {"FAVORITES", s("favorites")}
         };
 
         for (String[] item : values) {
-            final String platform = item[0];
-            Button chip = smallButton(item[1], platform.equals(activeFilter));
+            final String filter = item[0];
+            Button chip = smallButton(item[1], filter.equals(activeFilter));
             chip.setOnClickListener(v -> {
-                activeFilter = platform;
+                activeFilter = filter;
                 for (int i = 0; i < chips.getChildCount(); i++) {
                     View child = chips.getChildAt(i);
                     if (child instanceof Button) {
-                        String tag = (String) child.getTag();
-                        styleChip((Button) child, platform.equals(tag));
+                        styleChip((Button) child, filter.equals(child.getTag()));
                     }
                 }
                 renderLibraryItems();
             });
-            chip.setTag(platform);
+            chip.setTag(filter);
             LinearLayout.LayoutParams params = lp(-2, dp(38));
-            if (isArabic()) params.leftMargin = dp(7); else params.rightMargin = dp(7);
+            if (isArabic()) params.leftMargin = dp(8); else params.rightMargin = dp(8);
             chips.addView(chip, params);
         }
         horizontal.addView(chips);
-        page.addView(horizontal, margin(-1, dp(42), 0, dp(10)));
+        page.addView(horizontal, margin(-1, dp(40), 0, dp(12)));
     }
 
     private void renderGameList() {
@@ -260,46 +283,74 @@ public final class MainActivity extends Activity {
         String query = searchField == null || searchField.getText() == null
                 ? "" : searchField.getText().toString().trim().toLowerCase(Locale.ROOT);
         List<GameEntry> all = database.getAll();
+        int totalPsp = 0;
         int shown = 0;
 
         for (GameEntry game : all) {
-            if (!"ALL".equals(activeFilter) && !activeFilter.equals(game.getPlatform())) continue;
-            if (!query.isEmpty() && !game.getName().toLowerCase(Locale.ROOT).contains(query)) continue;
+            if (!GameFileClassifier.PSP.equals(game.getPlatform())
+                    || !GameFileClassifier.isSupportedPspExtension(game.getExtension())) {
+                continue;
+            }
+            totalPsp++;
+            if ("FAVORITES".equals(activeFilter) && !game.isFavorite()) continue;
+            String name = game.getName() == null ? "" : game.getName();
+            if (!query.isEmpty() && !name.toLowerCase(Locale.ROOT).contains(query)) continue;
             shown++;
-            gameList.addView(createGameCard(game), margin(-1, -2, 0, dp(9)));
+            gameList.addView(createGameCard(game), margin(-1, -2, 0, dp(10)));
         }
 
+        if (gameCount != null) gameCount.setText(Integer.toString(totalPsp));
         if (shown == 0) {
             LinearLayout empty = panel();
             empty.setGravity(Gravity.CENTER);
-            empty.setPadding(dp(22), dp(30), dp(22), dp(30));
-            empty.addView(text(s("empty_title"), 15, palette.primaryText, true));
-            empty.addView(text(s("empty_body"), 12, palette.secondaryText, false), margin(-1, -2, dp(8), 0));
-            Button importButton = smallButton(s("import"), true);
-            importButton.setOnClickListener(v -> showImportOptions());
-            empty.addView(importButton, margin(-2, dp(42), dp(14), 0));
+            empty.setPadding(dp(22), dp(28), dp(22), dp(28));
+            String title = totalPsp == 0 ? s("empty_title") : s("no_matches_title");
+            String body = totalPsp == 0 ? s("empty_body") : s("no_matches_body");
+            empty.addView(text(title, 16, palette.primaryText, true));
+            TextView explanation = text(body, 12, palette.secondaryText, false);
+            explanation.setGravity(Gravity.CENTER);
+            explanation.setLineSpacing(dp(3), 1.0f);
+            empty.addView(explanation, margin(-1, -2, dp(9), 0));
+            Button importButton = smallButton(totalPsp == 0 ? s("import") : s("clear_search"), true);
+            importButton.setOnClickListener(v -> {
+                if (totalPsp == 0) showImportOptions();
+                else {
+                    activeFilter = "ALL";
+                    if (searchField != null) searchField.setText("");
+                    renderScreen();
+                }
+            });
+            empty.addView(importButton, margin(-2, dp(42), dp(12), 0));
             gameList.addView(empty);
         }
-
-        if (gameCount != null) gameCount.setText(Integer.toString(all.size()));
     }
 
     private LinearLayout createGameCard(GameEntry game) {
         LinearLayout card = panel();
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setPadding(dp(12), dp(12), dp(12), dp(12));
+        card.setPadding(dp(12), dp(13), dp(12), dp(13));
 
-        TextView icon = text(game.getPlatform(), 11, palette.accent, true);
+        TextView icon = text("PSP", 12, Color.WHITE, true);
         icon.setGravity(Gravity.CENTER);
-        icon.setBackground(background(palette.accentSoft, 13, palette.border));
-        card.addView(icon, lp(dp(54), dp(54)));
+        GradientDrawable iconBackground = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(105, 91, 248), Color.rgb(52, 59, 142)});
+        iconBackground.setCornerRadius(dp(16));
+        icon.setBackground(iconBackground);
+        card.addView(icon, lp(dp(54), dp(58)));
 
         LinearLayout details = new LinearLayout(this);
         details.setOrientation(LinearLayout.VERTICAL);
-        details.setPadding(dp(12), 0, dp(5), 0);
-        details.addView(text(game.getName(), 14, palette.primaryText, true));
-        String meta = game.getPlatform() + "  •  " + game.getExtension().toUpperCase(Locale.ROOT);
+        details.setPadding(dp(12), 0, dp(6), 0);
+        String displayName = game.getName() == null || game.getName().trim().isEmpty()
+                ? s("unknown_game") : game.getName();
+        TextView title = text(displayName, 14, palette.primaryText, true);
+        title.setMaxLines(2);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        details.addView(title);
+        String meta = game.getExtension().toUpperCase(Locale.ROOT)
+                + (game.getSizeBytes() > 0 ? "  •  " + formatSize(game.getSizeBytes()) : "");
         details.addView(text(meta, 10, palette.secondaryText, false), margin(-1, -2, dp(5), 0));
         card.addView(details, new LinearLayout.LayoutParams(0, -2, 1));
 
@@ -309,34 +360,27 @@ public final class MainActivity extends Activity {
             database.setFavorite(game.getId(), !game.isFavorite());
             renderLibraryItems();
         });
-        card.addView(favorite, lp(dp(44), dp(44)));
-        if (GameFileClassifier.PSP.equals(game.getPlatform())) {
-            Button play = smallButton("▶", true);
-            play.setContentDescription(s("play"));
-            play.setOnClickListener(v -> launchPspGame(game));
-            card.addView(play, margin(dp(44), dp(44), 0, 0));
-        }
+        card.addView(favorite, lp(dp(40), dp(42)));
+
+        Button play = smallButton("▶", true);
+        play.setContentDescription(s("play"));
+        play.setOnClickListener(v -> launchPspGame(game));
+        card.addView(play, margin(dp(42), dp(42), 0, 0));
         card.setOnClickListener(v -> showGameDetails(game));
+        card.setFocusable(true);
         return card;
     }
 
     private void renderFooter() {
-        TextView footer = text("NEXUS EMULATOR  •  " + (isArabic() ? "الإصدار 0.3" : "VERSION 0.3"), 9,
-                palette.secondaryText, true);
+        TextView footer = text("NEXUS  •  " + (isArabic() ? "مكتبتك محلياً" : "YOUR LOCAL COLLECTION"),
+                9, palette.secondaryText, true);
         footer.setGravity(Gravity.CENTER);
-        page.addView(footer, margin(-1, dp(30), dp(12), 0));
+        footer.setLetterSpacing(0.08f);
+        page.addView(footer, margin(-1, dp(28), dp(8), 0));
     }
 
     private void showImportOptions() {
-        String[] options = {s("import_file"), s("import_folder")};
-        new AlertDialog.Builder(this)
-                .setTitle(s("import"))
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) openFilePicker();
-                    else openFolderPicker();
-                })
-                .setNegativeButton(s("cancel"), null)
-                .show();
+        openFilePicker();
     }
 
     private void openFilePicker() {
@@ -344,119 +388,100 @@ public final class MainActivity extends Activity {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-        startActivityForResult(intent, REQUEST_IMPORT_FILES);
-    }
-
-    private void openFolderPicker() {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
-                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION |
-                Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
-        startActivityForResult(intent, REQUEST_IMPORT_FOLDER);
+        try {
+            startActivityForResult(intent, REQUEST_IMPORT_FILES);
+        } catch (Exception error) {
+            toast(s("file_picker_error"));
+        }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode != RESULT_OK || data == null) return;
+        if (requestCode != REQUEST_IMPORT_FILES || resultCode != RESULT_OK || data == null) return;
 
-        if (requestCode == REQUEST_IMPORT_FILES) {
-            pendingFiles.clear();
-            pendingFileIndex = 0;
-            if (data.getClipData() != null) {
-                for (int i = 0; i < data.getClipData().getItemCount(); i++) {
-                    pendingFiles.add(data.getClipData().getItemAt(i).getUri());
-                }
-            } else if (data.getData() != null) {
-                pendingFiles.add(data.getData());
+        pendingFiles.clear();
+        pendingFileIndex = 0;
+        pendingGrantFlags = data.getFlags()
+                & (Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        if (data.getClipData() != null) {
+            for (int i = 0; i < data.getClipData().getItemCount(); i++) {
+                Uri uri = data.getClipData().getItemAt(i).getUri();
+                if (uri != null) pendingFiles.add(uri);
             }
-            processNextImportedFile();
-        } else if (requestCode == REQUEST_IMPORT_FOLDER && data.getData() != null) {
-            importSelectedFolder(data.getData(), data.getFlags());
+        } else if (data.getData() != null) {
+            pendingFiles.add(data.getData());
         }
+        if (pendingFiles.isEmpty()) {
+            toast(s("no_files_selected"));
+            return;
+        }
+        processNextImportedFile();
     }
 
     private void processNextImportedFile() {
         if (pendingFileIndex >= pendingFiles.size()) {
             pendingFiles.clear();
+            pendingFileIndex = 0;
+            pendingGrantFlags = 0;
             renderLibraryItems();
             return;
         }
 
         Uri uri = pendingFiles.get(pendingFileIndex++);
-        if (!persistReadPermission(uri)) {
-            toast(s("permission_error"));
-            processNextImportedFile();
-            return;
-        }
-
         String name = queryDisplayName(uri);
         String extension = GameFileClassifier.extensionOf(name);
-        String detected = GameFileClassifier.classify(extension);
 
-        if (GameFileClassifier.UNSUPPORTED.equals(detected)) {
+        if (!GameFileClassifier.isSupportedPspExtension(extension)) {
             toast(s("unsupported") + " " + name);
             processNextImportedFile();
-        } else if (GameFileClassifier.AMBIGUOUS_DISC.equals(detected)) {
-            String[] platforms = GameFileClassifier.supportedDiscPlatforms().toArray(new String[0]);
-            new AlertDialog.Builder(this)
-                    .setTitle(s("choose_platform") + " — " + name)
-                    .setItems(platforms, (dialog, which) -> {
-                        storeGame(uri, name, platforms[which], extension, querySize(uri));
-                        processNextImportedFile();
-                    })
-                    .setOnCancelListener(dialog -> processNextImportedFile())
-                    .show();
-        } else {
-            storeGame(uri, name, detected, extension, querySize(uri));
+            return;
+        }
+        if (!persistReadPermission(uri, pendingGrantFlags)) {
+            toast(s("permission_error"));
             processNextImportedFile();
-        }
-    }
-
-    private void importSelectedFolder(Uri uri, int resultFlags) {
-        int grantFlags = resultFlags & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        if ((grantFlags & Intent.FLAG_GRANT_READ_URI_PERMISSION) == 0) {
-            toast(s("permission_error"));
-            return;
-        }
-        try {
-            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        } catch (SecurityException error) {
-            toast(s("permission_error"));
             return;
         }
 
-        String folderName = queryTreeName(uri);
-        String[] options = {s("pc_folder"), s("ps3_folder")};
-        new AlertDialog.Builder(this)
-                .setTitle(s("choose_folder_type"))
-                .setItems(options, (dialog, which) -> {
-                    String platform = which == 0 ? GameFileClassifier.PC : GameFileClassifier.PS3;
-                    String extension = which == 0 ? "FOLDER" : "PS3_FOLDER";
-                    storeGame(uri, folderName, platform, extension, 0L);
-                    renderLibraryItems();
-                    if (GameFileClassifier.PC.equals(platform)) toast(s("pc_folder_tip"));
-                })
-                .setNegativeButton(s("cancel"), null)
-                .show();
+        storeGame(uri, name, GameFileClassifier.PSP, extension, querySize(uri));
+        processNextImportedFile();
     }
 
-    private boolean persistReadPermission(Uri uri) {
+    private boolean persistReadPermission(Uri uri, int grantFlags) {
+        int required = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION;
+        if (uri == null || !"content".equals(uri.getScheme()) || (grantFlags & required) != required) {
+            return false;
+        }
         try {
-            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            getContentResolver().takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
             return true;
-        } catch (SecurityException error) {
+        } catch (SecurityException | IllegalArgumentException error) {
             return false;
         }
     }
 
     private void storeGame(Uri uri, String name, String platform, String extension, long size) {
-        if (!GameFileClassifier.isSupportedPlatform(platform)) return;
-        boolean inserted = database.insert(name, platform, uri.toString(), extension,
-                size, System.currentTimeMillis());
-        toast(inserted ? s("imported") : s("duplicate"));
-        if (gameCount != null) renderLibraryItems();
+        if (uri == null || !"content".equals(uri.getScheme())
+                || !GameFileClassifier.PSP.equals(platform)
+                || !GameFileClassifier.isSupportedPspExtension(extension)) {
+            toast(s("unsupported"));
+            return;
+        }
+        String safeName = name == null || name.trim().isEmpty() ? "PSP game." + extension : name.trim();
+        try {
+            boolean inserted = database.insert(safeName, GameFileClassifier.PSP, uri.toString(),
+                    extension, size, System.currentTimeMillis());
+            toast(inserted ? s("imported") : s("duplicate"));
+            renderLibraryItems();
+        } catch (RuntimeException error) {
+            toast(s("import_error"));
+        }
     }
 
     private String queryDisplayName(Uri uri) {
@@ -476,20 +501,6 @@ public final class MainActivity extends Activity {
         return fallback == null ? "Imported game" : fallback;
     }
 
-    private String queryTreeName(Uri uri) {
-        try {
-            String documentId = DocumentsContract.getTreeDocumentId(uri);
-            int colon = documentId.indexOf(':');
-            String path = colon >= 0 ? documentId.substring(colon + 1) : documentId;
-            int slash = path.lastIndexOf('/');
-            String name = slash >= 0 ? path.substring(slash + 1) : path;
-            if (!name.trim().isEmpty()) return name;
-        } catch (Exception ignored) {
-            // Use the document provider's display name.
-        }
-        return queryDisplayName(uri);
-    }
-
     private long querySize(Uri uri) {
         try (Cursor cursor = getContentResolver().query(uri,
                 new String[]{OpenableColumns.SIZE}, null, null, null)) {
@@ -505,24 +516,17 @@ public final class MainActivity extends Activity {
 
     private void showGameDetails(GameEntry game) {
         StringBuilder message = new StringBuilder();
-        message.append(s("platform")).append(": ").append(game.getPlatform()).append('\n');
+        message.append(s("platform")).append(": PSP").append('\n');
         message.append(s("file_type")).append(": ")
                 .append(game.getExtension().toUpperCase(Locale.ROOT)).append('\n');
         if (game.getSizeBytes() > 0) {
             message.append(s("size")).append(": ").append(formatSize(game.getSizeBytes())).append('\n');
         }
-        boolean psp = GameFileClassifier.PSP.equals(game.getPlatform());
-        message.append('\n').append(psp ? s("psp_ready_body") : s("coming_soon"));
-        if (GameFileClassifier.PC.equals(game.getPlatform())) {
-            message.append("\n\n").append(s("pc_folder_tip"));
-        }
-
+        message.append('\n').append(s("psp_ready_body"));
         new AlertDialog.Builder(this)
                 .setTitle(s("details") + " — " + game.getName())
                 .setMessage(message.toString())
-                .setPositiveButton(psp ? s("play") : s("ok"), (dialog, which) -> {
-                    if (psp) launchPspGame(game);
-                })
+                .setPositiveButton(s("play"), (dialog, which) -> launchPspGame(game))
                 .setNeutralButton(s(game.isFavorite() ? "unfavorite" : "favorite"), (dialog, which) -> {
                     database.setFavorite(game.getId(), !game.isFavorite());
                     renderLibraryItems();
@@ -563,8 +567,15 @@ public final class MainActivity extends Activity {
                 .setMessage(game.getName())
                 .setNegativeButton(s("cancel"), null)
                 .setPositiveButton(s("remove"), (dialog, which) -> {
-                    database.delete(game.getId());
-                    renderLibraryItems();
+                    if (database.delete(game.getId())) {
+                        try {
+                            getContentResolver().releasePersistableUriPermission(
+                                    Uri.parse(game.getUri()), Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        } catch (SecurityException ignored) {
+                            // The provider may have already revoked the grant.
+                        }
+                        renderLibraryItems();
+                    }
                 })
                 .show();
     }

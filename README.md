@@ -1,60 +1,44 @@
 # NEXUS
 
-NEXUS is a clean Android game library with a single user-facing interface. Repository and developer tooling are hidden from the app.
+NEXUS is a polished, offline-first Android companion for a personal PSP game collection.
 
-## Current playable path
+## What works in this build
 
-- PSP games launch through the official PPSSPP Android app installed on the device.
-- Import PSP files in ISO, CSO, PBP or ZSO format through Android's document picker.
-- NEXUS passes the selected content URI and temporary read permission to PPSSPP; it does not copy or upload game files.
-- If PPSSPP is missing, NEXUS offers its official download page.
-- PS2, PS3 and Windows titles can be catalogued, but their playback engines are not yet integrated. They are not shown as playable.
+- Import one or multiple PSP game files using Android's Storage Access Framework.
+- Supported formats: ISO, CSO, PBP and ZSO.
+- Persist only the read permission granted by the selected document provider.
+- Browse a local SQLite library, search by game name, filter favorites, view file details, remove entries and launch games.
+- Arabic RTL by default and English language switch.
+- Dark and light themes.
+- PSP playback handoff to the official PPSSPP Android app (standard or Gold).
+- No user account, ads, analytics, remote API, broad storage permission or app-side file uploads.
+
+## Deliberately hidden capabilities
+
+PS2, PS3 and Windows game playback are not integrated into NEXUS. Their old catalogue entries are retained in the local database but excluded from the visible library and import flow. NEXUS does not claim that those systems are playable.
+
+The Java frontend does not embed a PPSSPP core. It opens the user-selected PSP file in an independently installed official PPSSPP app. Runtime compatibility is controlled by the device's CPU, GPU, Android version, PPSSPP build and individual game.
 
 ## Android compatibility
 
-- NEXUS frontend: Android 6.0 (API 23) and newer.
-- No ABI filter is imposed on the Java frontend; supported ARM32, ARM64 and x86/x86_64 Android builds can install it.
-- PSP runtime compatibility depends on the official PPSSPP build available for the device's CPU/GPU and Android version.
-- No emulator can guarantee every device or every game. Performance depends on the SoC, graphics driver, RAM, thermal limits and game.
+- Frontend: Android 6.0 (API 23) and newer.
+- Compile/target SDK: 35.
+- Java: 17.
+- No ABI filter on the Java frontend.
+- External PPSSPP runtime must support the device ABI and graphics driver.
 
-## User features
-
-- Arabic RTL by default and English language switch.
-- Dark and light themes.
-- Local SQLite game library, search, platform filters and favorites.
-- Single/multi-file import and folder import via Android Storage Access Framework.
-- Game details, duplicate detection and URI permission handling.
-- No account, analytics, ads, remote API or broad storage permission.
-
-## Build
+## Build and verification
 
 Requirements: JDK 17, Android SDK Platform 35, Build Tools 35.0.0 and Gradle 8.9.
 
-```bash
-gradle --no-daemon :app:testDebugUnitTest
-gradle --no-daemon :app:assembleDebug
-```
+Build commands: gradle --no-daemon :app:testDebugUnitTest, then gradle --no-daemon :app:assembleDebug.
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`.
+APK output: app/build/outputs/apk/debug/app-debug.apk.
 
-GitHub Actions runs JVM tests, builds the APK, installs it on an x86_64 Android emulator and launches the main activity.
+GitHub Actions runs source checks and the full JVM test suite first. The Android build and emulator install/launch test run only after verification succeeds.
 
-## Import formats
+## Privacy and legal boundary
 
-- PSP: `.iso`, `.cso`, `.pbp`, `.zso`.
-- PS2: `.chd` and manually selected disc images (catalogue only in this build).
-- PS3: `.pkg` or a PS3 folder (catalogue only in this build).
-- Windows: import the complete installed game folder (catalogue only in this build).
+NEXUS does not distribute commercial game files, console firmware, BIOS images or encryption keys. Import only games you are legally entitled to use. Files remain with the selected document provider; NEXUS stores document URIs and metadata locally.
 
-Use only game files you are legally entitled to use. NEXUS does not include commercial games, console firmware, BIOS images or encryption keys.
-
-## Engine source and licenses
-
-Upstream sources remain pinned as submodules for planned work. They are development references, not engine binaries embedded in the current NEXUS APK. Retain all upstream copyright and license notices and review each engine's dependencies before redistribution.
-
-- PPSSPP: GPL-2.0-or-later
-- ARMSX2: GPL-3.0
-- ARMSX3: GPL-2.0-only
-- Winlator app: LGPL-2.1
-
-See `docs/ENGINE_INTEGRATION.md` for scope and legal/technical boundaries.
+The upstream engine source references are not bundled runtime binaries. See docs/ENGINE_INTEGRATION.md for their current status and licenses.
