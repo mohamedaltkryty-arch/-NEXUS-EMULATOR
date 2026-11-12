@@ -32,11 +32,11 @@ The Java frontend does not embed a PPSSPP core. It opens the user-selected PSP f
 
 Requirements: JDK 17, Android SDK Platform 36, Build Tools 36.0.0, Android Gradle Plugin 8.10.1 and Gradle 8.11.1.
 
-Build commands: gradle --no-daemon :app:testDebugUnitTest, then gradle --no-daemon :app:assembleDebug.
+Build commands: `gradle --no-daemon :app:testDebugUnitTest`, then `gradle --no-daemon :app:assembleDebug`.
 
-APK output: app/build/outputs/apk/debug/app-debug.apk.
+APK output: `app/build/outputs/apk/debug/app-debug.apk`.
 
-GitHub Actions runs source checks and the full JVM test suite first. The Android build and emulator install/launch test run only after verification succeeds.
+GitHub Actions runs source checks, JVM tests and Android lint first. Only after they pass does it build and verify the installable APK, then install and launch it on an Android emulator. The v0.7.0 debug APK is signed with the standard debug certificate for direct device testing; it is not a Play Store release signed with a private production key.
 
 ## Privacy and legal boundary
 
