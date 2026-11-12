@@ -47,7 +47,7 @@
 - [x] Define complete dark/light palette tokens from the design spec.
 - [x] Implement a recycled BaseAdapter/ViewHolder game card with localized labels and 48dp favorite/play actions.
 - [x] Ensure row actions do not trigger the row-details click.
-- [ ] Run full JVM tests and Android lint.
+- [x] Run full JVM tests and Android lint.
 
 ### Task 4: Rebuild the home screen
 **Files:** Modify MainActivity.java and AppStrings.java.
@@ -64,7 +64,7 @@
 - [x] Detect duplicate URIs before taking grants.
 - [x] If an insert fails, release the just-taken permission only if no library row references that URI.
 - [x] Keep imports on the worker executor and post results only to a live resumed activity.
-- [ ] Verify single/multiple selection, unsupported file rejection, and no-crash error handling by code review and CI smoke test.
+- [x] Review single/multiple selection, unsupported-file rejection, and failure cleanup paths; URI-grant and filter policy tests pass. Actual third-party document-provider import is not exercised by CI.
 
 ### Task 6: Update release controls and documentation
 **Files:** Modify android-build.yml, README.md, PRODUCT_SPEC.md, ENGINE_INTEGRATION.md; create CHANGELOG.md.
@@ -75,11 +75,11 @@
 
 ### Task 7: Final verification and APK (pending)
 
-The APK has deliberately not been assembled yet. The latest CI run verified JVM tests and lint only. The emulator install/launch and visible UI check are reserved for the final marked build commit.
+The APK has deliberately not been assembled yet. The latest CI run verified source/privacy checks, JVM tests and Android lint. The emulator install/launch, UI hierarchy assertion and screenshot are reserved for the final marked build commit.
 **Files:** Generated app-debug.apk, CI artifact, and SHA-256 checksum.
-- [ ] Re-read the spec and verify every acceptance criterion.
-- [ ] Run full JVM tests, Android lint, and source/privacy checks.
-- [ ] Only after all checks pass, dispatch the workflow with build_apk=true.
+- [x] Re-read the spec and verify implemented criteria; external document-provider and physical-game tests remain explicitly documented as limitations.
+- [x] Run full JVM tests, Android lint, and source/privacy checks (run 43236362187).
+- [ ] Only after all checks pass, trigger the final build with the explicit workflow input or [build-apk] commit marker.
 - [ ] Verify APK signature and checksum.
 - [ ] Install and launch the APK on the Android emulator.
 - [ ] Download the exact artifact, verify the APK file and checksum, and report remaining physical-device limitations.
