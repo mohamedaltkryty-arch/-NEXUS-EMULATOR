@@ -122,6 +122,8 @@ public final class GameListAdapter extends BaseAdapter {
         metadata.setTextColor(palette.secondaryText);
         metadata.setTextSize(10);
         metadata.setSingleLine(true);
+        metadata.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        metadata.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
         details.addView(metadata, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(20)));
 

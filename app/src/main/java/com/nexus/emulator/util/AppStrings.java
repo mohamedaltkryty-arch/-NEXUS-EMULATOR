@@ -64,7 +64,7 @@ public final class AppStrings {
         put("launch_error", "تعذر فتح اللعبة. تحقق من الملف وصلاحية الوصول.", "Could not open the game. Check the file and access permission.");
         put("coming_soon", "تشغيل هذه المنصة غير متاح في هذا الإصدار بعد.", "This platform is not playable in this version yet.");
         put("favorites", "المفضلة", "Favorites");
-        put("games_in_library", "ألعاب في مكتبتك", "GAMES IN YOUR LIBRARY");
+        put("games_in_library", "عدد الألعاب", "GAMES IN YOUR LIBRARY");
         put("local_library", "محفوظة على جهازك", "SAVED ON DEVICE");
         put("no_matches_title", "لا توجد نتائج مطابقة", "No matching games");
         put("no_matches_body", "جرّب البحث باسم آخر أو اعرض كل الألعاب.", "Try another search or switch back to all games.");
