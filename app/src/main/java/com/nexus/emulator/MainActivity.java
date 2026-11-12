@@ -341,7 +341,7 @@ public final class MainActivity extends Activity {
             chips.addView(chip, params);
         }
         horizontal.addView(chips);
-        page.addView(horizontal, margin(-1, dp(40), 0, dp(12)));
+        page.addView(horizontal, margin(-1, dp(48), 0, dp(12)));
     }
 
     private void renderGameList() {
@@ -396,7 +396,7 @@ public final class MainActivity extends Activity {
                     renderScreen();
                 }
             });
-            empty.addView(importButton, margin(-2, dp(42), dp(12), 0));
+            empty.addView(importButton, margin(-2, dp(48), dp(12), 0));
             gameList.addView(empty);
         }
     }

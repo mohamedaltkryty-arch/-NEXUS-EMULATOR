@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import java.util.Locale;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -42,8 +43,14 @@ public final class AppStringsTest {
         String english = String.format(Locale.ENGLISH,
                 AppStrings.get("import_summary", false), 2, 1, 3);
 
-        assertTrue(arabic.contains("2"));
-        assertTrue(english.contains("2"));
-        assertTrue(english.contains("3"));
+        assertTrue(arabic.contains("أُضيفت"));
+        assertTrue(arabic.contains("مكررة"));
+        assertTrue(arabic.contains("مرفوضة"));
+        assertFalse(arabic.contains("%1$d"));
+        assertFalse(arabic.contains("%2$d"));
+        assertFalse(arabic.contains("%3$d"));
+        assertTrue(english.contains("2 added"));
+        assertTrue(english.contains("1 duplicates"));
+        assertTrue(english.contains("3 skipped"));
     }
 }
