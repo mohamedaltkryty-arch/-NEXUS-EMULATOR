@@ -30,50 +30,52 @@
 
 ### Task 1: Add pure-Java regression tests
 **Files:** Create GameLibraryFilter.java and GameLibraryFilterTest.java; create UriGrantPolicy.java and UriGrantPolicyTest.java.
-- [ ] Write tests for all/favorites filtering, case-insensitive search, null-safe names, empty inputs, and URI scheme/read/persistable flags.
-- [ ] Run focused tests and confirm they fail because policy classes do not exist.
-- [ ] Implement GameLibraryFilter.filter(List<GameEntry>, String, boolean) and UriGrantPolicy.canPersistReadPermission(int, String).
-- [ ] Re-run focused tests and confirm they pass.
+- [x] Write tests for all/favorites filtering, case-insensitive search, null-safe names, empty inputs, and URI scheme/read/persistable flags.
+- [x] Run focused tests and confirm they fail because policy classes do not exist.
+- [x] Implement GameLibraryFilter.filter(List<GameEntry>, String, boolean) and UriGrantPolicy.canPersistReadPermission(int, String).
+- [x] Re-run focused tests and confirm they pass.
 
 ### Task 2: Harden library persistence
 **Files:** Modify GameDatabase.java.
-- [ ] Add containsUri(String) using a parameterized query.
-- [ ] Upgrade database schema to version 3 with a non-destructive PSP library query index.
-- [ ] Keep existing records and indexes; do not drop or rewrite user data.
-- [ ] Run full JVM tests and Android lint.
+- [x] Add containsUri(String) using a parameterized query.
+- [x] Upgrade database schema to version 3 with a non-destructive PSP library query index.
+- [x] Keep existing records and indexes; do not drop or rewrite user data.
+- [x] Run full JVM tests and Android lint.
 
 ### Task 3: Build the recycled game-row component
 **Files:** Create NexusPalette.java and GameListAdapter.java; modify styles.xml.
-- [ ] Define complete dark/light palette tokens from the design spec.
-- [ ] Implement a recycled BaseAdapter/ViewHolder game card with localized labels and 48dp favorite/play actions.
-- [ ] Ensure row actions do not trigger the row-details click.
+- [x] Define complete dark/light palette tokens from the design spec.
+- [x] Implement a recycled BaseAdapter/ViewHolder game card with localized labels and 48dp favorite/play actions.
+- [x] Ensure row actions do not trigger the row-details click.
 - [ ] Run full JVM tests and Android lint.
 
 ### Task 4: Rebuild the home screen
 **Files:** Modify MainActivity.java and AppStrings.java.
-- [ ] Replace the permanent hero + ScrollView list with a compact top bar, collection summary, search, All/Favorites chips, recycled ListView, and fixed import action.
-- [ ] Hide search and filter controls when no PSP games exist.
-- [ ] Add distinct empty-library and no-results states with working recovery behavior.
-- [ ] Keep details, favorite, play, remove, settings, theme, language, and about actions functional.
-- [ ] Preserve Arabic RTL and English layout direction across the screen and dialogs.
+- [x] Replace the permanent hero + ScrollView list with a compact top bar, collection summary, search, All/Favorites chips, recycled ListView, and fixed import action.
+- [x] Hide search and filter controls when no PSP games exist.
+- [x] Add distinct empty-library and no-results states with working recovery behavior.
+- [x] Keep details, favorite, play, remove, settings, theme, language, and about actions functional.
+- [x] Preserve Arabic RTL and English layout direction across the screen and dialogs.
 - [ ] Run full JVM tests and Android lint.
 
 ### Task 5: Harden SAF import lifecycle
 **Files:** Modify MainActivity.java and GameDatabase.java; test UriGrantPolicy.
-- [ ] Use UriGrantPolicy before taking persisted permissions.
-- [ ] Detect duplicate URIs before taking grants.
-- [ ] If an insert fails, release the just-taken permission only if no library row references that URI.
-- [ ] Keep imports on the worker executor and post results only to a live resumed activity.
+- [x] Use UriGrantPolicy before taking persisted permissions.
+- [x] Detect duplicate URIs before taking grants.
+- [x] If an insert fails, release the just-taken permission only if no library row references that URI.
+- [x] Keep imports on the worker executor and post results only to a live resumed activity.
 - [ ] Verify single/multiple selection, unsupported file rejection, and no-crash error handling by code review and CI smoke test.
 
 ### Task 6: Update release controls and documentation
 **Files:** Modify android-build.yml, README.md, PRODUCT_SPEC.md, ENGINE_INTEGRATION.md; create CHANGELOG.md.
-- [ ] Keep verification (JVM tests, lint, source/privacy checks) on pushes and pull requests.
-- [ ] Gate APK packaging and emulator smoke tests behind an explicit manual workflow input.
-- [ ] Document real features, unsupported platforms, data privacy, build commands, and debug-signing limitations.
-- [ ] Run full CI verification without invoking APK packaging.
+- [x] Keep verification (JVM tests, lint, source/privacy checks) on pushes and pull requests.
+- [x] Gate APK packaging and emulator smoke tests behind an explicit manual workflow input.
+- [x] Document real features, unsupported platforms, data privacy, build commands, and debug-signing limitations.
+- [x] Run full CI verification without invoking APK packaging.
 
-### Task 7: Final verification and APK
+### Task 7: Final verification and APK (pending)
+
+The APK has deliberately not been assembled yet. The latest CI run verified JVM tests and lint only. The emulator install/launch and visible UI check are reserved for the final marked build commit.
 **Files:** Generated app-debug.apk, CI artifact, and SHA-256 checksum.
 - [ ] Re-read the spec and verify every acceptance criterion.
 - [ ] Run full JVM tests, Android lint, and source/privacy checks.
