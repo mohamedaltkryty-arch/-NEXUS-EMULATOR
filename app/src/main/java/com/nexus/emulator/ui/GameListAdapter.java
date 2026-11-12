@@ -93,7 +93,7 @@ public final class GameListAdapter extends BaseAdapter {
         card.setClickable(true);
 
         TextView mark = new TextView(context);
-        mark.setText("PSP");
+        mark.setText(AppStrings.get("psp", arabic));
         mark.setTextSize(12);
         mark.setTypeface(Typeface.DEFAULT_BOLD);
         mark.setTextColor(Color.WHITE);
