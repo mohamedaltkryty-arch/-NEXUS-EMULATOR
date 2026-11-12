@@ -3,6 +3,9 @@ package com.nexus.emulator;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.ContentResolver;
+import android.os.Handler;
+import android.os.Looper;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -37,9 +40,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.text.NumberFormat;
+import java.lang.ref.WeakReference;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public final class MainActivity extends Activity {
     private static final int REQUEST_IMPORT_FILES = 4101;
+    private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
+    private static volatile WeakReference<MainActivity> resumedActivity = new WeakReference<>(null);
 
     private GameDatabase database;
     private SettingsStore settings;
@@ -49,7 +57,11 @@ public final class MainActivity extends Activity {
     private TextView gameCount;
     private String activeFilter = "ALL";
     private final List<Uri> pendingFiles = new ArrayList<>();
-    private int pendingFileIndex;
+    private final ExecutorService importExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "nexus-import-worker");
+        thread.setDaemon(true);
+        return thread;
+    });
     private int pendingGrantFlags;
 
     private static final class Palette {
@@ -100,7 +112,22 @@ public final class MainActivity extends Activity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        resumedActivity = new WeakReference<>(this);
+        if (gameList != null) renderLibraryItems();
+    }
+
+    @Override
+    protected void onPause() {
+        MainActivity active = resumedActivity.get();
+        if (active == this) resumedActivity = new WeakReference<>(null);
+        super.onPause();
+    }
+
+    @Override
     protected void onDestroy() {
+        importExecutor.shutdown();
         if (database != null) database.close();
         super.onDestroy();
     }
@@ -449,10 +476,10 @@ public final class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        resumedActivity = new WeakReference<>(this);
         if (requestCode != REQUEST_IMPORT_FILES || resultCode != RESULT_OK || data == null) return;
 
         pendingFiles.clear();
-        pendingFileIndex = 0;
         pendingGrantFlags = data.getFlags()
                 & (Intent.FLAG_GRANT_READ_URI_PERMISSION
                 | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
@@ -473,49 +500,83 @@ public final class MainActivity extends Activity {
     }
 
     private void processNextImportedFile() {
-        int imported = 0;
-        int duplicates = 0;
-        int rejected = 0;
+        if (pendingFiles.isEmpty()) return;
 
-        while (pendingFileIndex < pendingFiles.size()) {
-            Uri uri = pendingFiles.get(pendingFileIndex++);
-            String name = queryDisplayName(uri);
-            String extension = GameFileClassifier.extensionOf(name);
-
-            if (!GameFileClassifier.isSupportedPspExtension(extension)) {
-                rejected++;
-                continue;
-            }
-            if (!persistReadPermission(uri, pendingGrantFlags)) {
-                rejected++;
-                continue;
-            }
-
-            int result = storeGame(uri, name, GameFileClassifier.PSP, extension, querySize(uri));
-            if (result > 0) imported++;
-            else if (result == 0) duplicates++;
-            else rejected++;
-        }
+        final List<Uri> selectedFiles = new ArrayList<>(pendingFiles);
+        final int grantFlags = pendingGrantFlags;
+        final Locale resultLocale = appLocale();
+        final String summaryPattern = s("import_summary");
+        final String importingMessage = s("importing");
 
         pendingFiles.clear();
-        pendingFileIndex = 0;
         pendingGrantFlags = 0;
-        renderLibraryItems();
+        toast(importingMessage);
 
-        if (imported + duplicates + rejected > 0) {
-            toast(String.format(appLocale(), s("import_summary"),
-                    imported, duplicates, rejected));
-        }
+        final ContentResolver resolver = getApplicationContext().getContentResolver();
+        final android.content.Context appContext = getApplicationContext();
+
+        importExecutor.execute(() -> {
+            int imported = 0;
+            int duplicates = 0;
+            int rejected = 0;
+            int processed = 0;
+            GameDatabase importDatabase = null;
+
+            try {
+                importDatabase = new GameDatabase(appContext);
+                for (Uri uri : selectedFiles) {
+                    processed++;
+                    try {
+                        String name = queryDisplayName(resolver, uri);
+                        String extension = GameFileClassifier.extensionOf(name);
+
+                        if (!GameFileClassifier.isSupportedPspExtension(extension)
+                                || !persistReadPermission(resolver, uri, grantFlags)) {
+                            rejected++;
+                            continue;
+                        }
+
+                        int result = storeGame(importDatabase, uri, name,
+                                GameFileClassifier.PSP, extension, querySize(resolver, uri));
+                        if (result > 0) imported++;
+                        else if (result == 0) duplicates++;
+                        else rejected++;
+                    } catch (RuntimeException error) {
+                        rejected++;
+                    }
+                }
+            } catch (RuntimeException error) {
+                rejected += selectedFiles.size() - processed;
+            } finally {
+                if (importDatabase != null) importDatabase.close();
+            }
+
+            final int importedCount = imported;
+            final int duplicateCount = duplicates;
+            final int rejectedCount = rejected;
+            final String summary = String.format(resultLocale, summaryPattern,
+                    importedCount, duplicateCount, rejectedCount);
+
+            MAIN_HANDLER.post(() -> {
+                MainActivity active = resumedActivity.get();
+                if (active != null && !active.isFinishing() && !active.isDestroyed()) {
+                    active.renderLibraryItems();
+                    active.toast(summary);
+                }
+            });
+        });
     }
 
-    private boolean persistReadPermission(Uri uri, int grantFlags) {
+    private static boolean persistReadPermission(
+            ContentResolver resolver, Uri uri, int grantFlags) {
         int required = Intent.FLAG_GRANT_READ_URI_PERMISSION
                 | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION;
-        if (uri == null || !"content".equals(uri.getScheme()) || (grantFlags & required) != required) {
+        if (resolver == null || uri == null || !"content".equals(uri.getScheme())
+                || (grantFlags & required) != required) {
             return false;
         }
         try {
-            getContentResolver().takePersistableUriPermission(
+            resolver.takePersistableUriPermission(
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
             return true;
         } catch (SecurityException | IllegalArgumentException error) {
@@ -523,23 +584,25 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private int storeGame(Uri uri, String name, String platform, String extension, long size) {
-        if (uri == null || !"content".equals(uri.getScheme())
+    private static int storeGame(GameDatabase targetDatabase, Uri uri, String name,
+                                 String platform, String extension, long size) {
+        if (targetDatabase == null || uri == null || !"content".equals(uri.getScheme())
                 || !GameFileClassifier.PSP.equals(platform)
                 || !GameFileClassifier.isSupportedPspExtension(extension)) {
             return -1;
         }
         String safeName = name == null || name.trim().isEmpty() ? "PSP game." + extension : name.trim();
         try {
-            return database.insert(safeName, GameFileClassifier.PSP, uri.toString(),
+            return targetDatabase.insert(safeName, GameFileClassifier.PSP, uri.toString(),
                     extension, size, System.currentTimeMillis()) ? 1 : 0;
         } catch (RuntimeException error) {
             return -1;
         }
     }
 
-    private String queryDisplayName(Uri uri) {
-        try (Cursor cursor = getContentResolver().query(uri,
+    private static String queryDisplayName(ContentResolver resolver, Uri uri) {
+        if (resolver == null || uri == null) return "Imported game";
+        try (Cursor cursor = resolver.query(uri,
                 new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
             if (cursor != null && cursor.moveToFirst()) {
                 int index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
@@ -555,8 +618,9 @@ public final class MainActivity extends Activity {
         return fallback == null ? "Imported game" : fallback;
     }
 
-    private long querySize(Uri uri) {
-        try (Cursor cursor = getContentResolver().query(uri,
+    private static long querySize(ContentResolver resolver, Uri uri) {
+        if (resolver == null || uri == null) return 0L;
+        try (Cursor cursor = resolver.query(uri,
                 new String[]{OpenableColumns.SIZE}, null, null, null)) {
             if (cursor != null && cursor.moveToFirst()) {
                 int index = cursor.getColumnIndex(OpenableColumns.SIZE);

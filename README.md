@@ -29,7 +29,7 @@ The Java frontend does not embed a PPSSPP core. It opens the user-selected PSP f
 
 ## Build and verification
 
-Requirements: JDK 17, Android SDK Platform 36, Build Tools 36.0.0, Android Gradle Plugin 8.9.1 and Gradle 8.11.1.
+Requirements: JDK 17, Android SDK Platform 36, Build Tools 36.0.0, Android Gradle Plugin 8.10.1 and Gradle 8.11.1.
 
 Build commands: gradle --no-daemon :app:testDebugUnitTest, then gradle --no-daemon :app:assembleDebug.
 

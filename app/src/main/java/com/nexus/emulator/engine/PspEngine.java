@@ -9,8 +9,9 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
 
+import com.nexus.emulator.catalog.GameFileClassifier;
+
 import java.io.FileNotFoundException;
-import java.util.Locale;
 
 public final class PspEngine {
     private static final String[] PACKAGES = {
@@ -22,9 +23,8 @@ public final class PspEngine {
     private PspEngine() { }
 
     public static boolean supportsGame(String platform, String extension) {
-        if (platform == null || extension == null || !"PSP".equals(platform)) return false;
-        String ext = extension.trim().toLowerCase(Locale.ROOT);
-        return "iso".equals(ext) || "cso".equals(ext) || "pbp".equals(ext) || "zso".equals(ext);
+        return GameFileClassifier.PSP.equals(platform)
+                && GameFileClassifier.isSupportedPspExtension(extension);
     }
 
     public static void launch(Activity activity, Uri gameUri, String displayName)
