@@ -2,17 +2,18 @@ package com.nexus.emulator;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Intent;
 import android.content.ContentResolver;
-import android.os.Handler;
-import android.os.Looper;
+import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
-import android.os.Bundle;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.OpenableColumns;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -21,28 +22,33 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.HorizontalScrollView;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.nexus.emulator.catalog.GameFileClassifier;
+import com.nexus.emulator.catalog.GameLibraryFilter;
 import com.nexus.emulator.data.GameDatabase;
 import com.nexus.emulator.data.SettingsStore;
 import com.nexus.emulator.engine.PspEngine;
 import com.nexus.emulator.model.GameEntry;
+import com.nexus.emulator.security.UriGrantPolicy;
+import com.nexus.emulator.ui.GameListAdapter;
+import com.nexus.emulator.ui.NexusPalette;
 import com.nexus.emulator.util.AppStrings;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.text.NumberFormat;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 public final class MainActivity extends Activity {
     private static final int REQUEST_IMPORT_FILES = 4101;
@@ -51,11 +57,21 @@ public final class MainActivity extends Activity {
 
     private GameDatabase database;
     private SettingsStore settings;
-    private LinearLayout page;
-    private LinearLayout gameList;
+    private NexusPalette palette;
+    private LinearLayout root;
+    private ListView gameList;
+    private GameListAdapter gameAdapter;
+    private FrameLayout listFrame;
+    private LinearLayout emptyState;
+    private TextView emptyTitle;
+    private TextView emptyBody;
+    private Button emptyAction;
     private EditText searchField;
     private TextView gameCount;
+    private Button allFilterButton;
+    private Button favoritesFilterButton;
     private String activeFilter = "ALL";
+    private String currentQuery = "";
     private final List<Uri> pendingFiles = new ArrayList<>();
     private final ExecutorService importExecutor = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "nexus-import-worker");
@@ -64,50 +80,15 @@ public final class MainActivity extends Activity {
     });
     private int pendingGrantFlags;
 
-    private static final class Palette {
-        final int background;
-        final int surface;
-        final int border;
-        final int primaryText;
-        final int secondaryText;
-        final int accent;
-        final int accentSoft;
-        final int field;
-
-        Palette(boolean dark) {
-            if (dark) {
-                background = Color.rgb(8, 12, 22);
-                surface = Color.rgb(17, 25, 42);
-                border = Color.rgb(36, 49, 72);
-                primaryText = Color.rgb(244, 247, 255);
-                secondaryText = Color.rgb(151, 164, 189);
-                accent = Color.rgb(113, 96, 255);
-                accentSoft = Color.rgb(42, 39, 82);
-                field = Color.rgb(18, 29, 48);
-            } else {
-                background = Color.rgb(244, 247, 252);
-                surface = Color.WHITE;
-                border = Color.rgb(222, 229, 241);
-                primaryText = Color.rgb(19, 27, 45);
-                secondaryText = Color.rgb(100, 114, 139);
-                accent = Color.rgb(91, 75, 224);
-                accentSoft = Color.rgb(237, 234, 255);
-                field = Color.rgb(235, 240, 248);
-            }
-        }
-    }
-
-    private Palette palette;
-
     @Override
     protected void onCreate(Bundle state) {
-        boolean dark = getSharedPreferences("nexus_settings", MODE_PRIVATE).getBoolean("theme_dark", true);
+        boolean dark = getSharedPreferences("nexus_settings", MODE_PRIVATE)
+                .getBoolean("theme_dark", true);
         setTheme(dark ? R.style.AppThemeDark : R.style.AppThemeLight);
         super.onCreate(state);
 
         settings = new SettingsStore(this);
         database = new GameDatabase(this);
-        applySystemBars();
         renderScreen();
     }
 
@@ -115,13 +96,17 @@ public final class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         resumedActivity = new WeakReference<>(this);
-        if (gameList != null) renderLibraryItems();
+        if (database != null) {
+            if (gameList != null) refreshLibraryItems();
+            else renderScreen();
+        }
     }
 
     @Override
     protected void onPause() {
-        MainActivity active = resumedActivity.get();
-        if (active == this) resumedActivity = new WeakReference<>(null);
+        if (resumedActivity.get() == this) {
+            resumedActivity = new WeakReference<>(null);
+        }
         super.onPause();
     }
 
@@ -164,7 +149,7 @@ public final class MainActivity extends Activity {
             return;
         }
 
-        int barColor = dark ? Color.rgb(8, 12, 22) : Color.rgb(244, 247, 252);
+        int barColor = dark ? Color.rgb(11, 16, 32) : Color.rgb(244, 246, 251);
         window.setStatusBarColor(barColor);
         window.setNavigationBarColor(barColor);
 
@@ -186,114 +171,100 @@ public final class MainActivity extends Activity {
     }
 
     private void renderScreen() {
-        palette = new Palette(settings.isDarkTheme());
+        palette = NexusPalette.from(settings.isDarkTheme());
+        gameList = null;
+        gameAdapter = null;
+        listFrame = null;
+        emptyState = null;
+        emptyTitle = null;
+        emptyBody = null;
+        emptyAction = null;
+        searchField = null;
+        gameCount = null;
+        allFilterButton = null;
+        favoritesFilterButton = null;
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        scroll.setClipToPadding(false);
-        scroll.setBackgroundColor(palette.background);
+        root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setLayoutDirection(isArabic() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
+        root.setBackgroundColor(palette.background);
+        root.setPadding(dp(20), dp(12), dp(20), dp(12));
+
         if (Build.VERSION.SDK_INT >= 35) {
-            scroll.setOnApplyWindowInsetsListener((view, insets) -> {
-                int insetTypes = WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout();
-                android.graphics.Insets safeInsets = insets.getInsets(insetTypes);
-                view.setPadding(safeInsets.left, safeInsets.top, safeInsets.right, safeInsets.bottom);
+            root.setOnApplyWindowInsetsListener((view, insets) -> {
+                int types = WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout();
+                android.graphics.Insets safe = insets.getInsets(types);
+                view.setPadding(dp(20) + safe.left, dp(12) + safe.top,
+                        dp(20) + safe.right, dp(12) + safe.bottom);
                 return insets;
             });
         }
 
-        page = new LinearLayout(this);
-        page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(dp(20), dp(18), dp(20), dp(32));
-        page.setLayoutDirection(isArabic() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
-        page.setBackgroundColor(palette.background);
-        scroll.addView(page);
+        renderHeader(root);
+        List<GameEntry> games = database.getAllPsp();
+        if (games.isEmpty()) {
+            root.addView(createEmptyState(true),
+                    new LinearLayout.LayoutParams(-1, 0, 1f));
+        } else {
+            renderCollectionSummary(root, games.size());
+            renderSearch(root);
+            renderFilters(root);
+            renderListArea(root, games);
+        }
+        renderImportFooter(root);
 
-        renderHeader();
-        renderHero();
-        renderStatistics();
-        renderLibraryHeader();
-        renderFilters();
-        renderGameList();
-        renderFooter();
-
-        setContentView(scroll);
+        setContentView(root);
         applySystemBars();
     }
 
-    private void renderHeader() {
+    private void renderHeader(LinearLayout container) {
         LinearLayout header = row();
         header.setGravity(Gravity.CENTER_VERTICAL);
 
         LinearLayout branding = new LinearLayout(this);
         branding.setOrientation(LinearLayout.VERTICAL);
-        TextView name = text("NEXUS", 27, palette.primaryText, true);
+
+        TextView name = text("NEXUS", 26, palette.primaryText, true);
         name.setLetterSpacing(0.12f);
         branding.addView(name);
-        TextView caption = text(isArabic() ? "مكتبة ألعاب PSP الخاصة بك" : "YOUR PSP GAME LIBRARY",
-                9, palette.secondaryText, true);
-        caption.setLetterSpacing(0.10f);
-        branding.addView(caption, lp(-2, dp(18)));
-        header.addView(branding, new LinearLayout.LayoutParams(0, -2, 1));
+
+        TextView caption = text(s("tagline"), 10, palette.secondaryText, true);
+        caption.setLetterSpacing(0.04f);
+        branding.addView(caption, lp(-2, dp(20)));
+        header.addView(branding, new LinearLayout.LayoutParams(0, -2, 1f));
 
         Button settingsButton = smallButton("⚙", false);
         settingsButton.setContentDescription(s("settings"));
-        settingsButton.setOnClickListener(v -> showSettings());
+        settingsButton.setOnClickListener(view -> showSettings());
         header.addView(settingsButton, lp(dp(48), dp(48)));
-        page.addView(header, margin(-1, -2, 0, dp(18)));
+
+        container.addView(header, margin(-1, -2, 0, dp(16)));
     }
 
-    private void renderHero() {
-        LinearLayout hero = panel();
-        GradientDrawable heroBackground = new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.rgb(44, 47, 112), Color.rgb(25, 35, 65)});
-        heroBackground.setCornerRadius(dp(24));
-        hero.setBackground(heroBackground);
-        hero.setPadding(dp(20), dp(20), dp(20), dp(20));
-
-        TextView badge = text("NEXUS  /  PSP COLLECTION", 10, Color.rgb(205, 202, 255), true);
-        badge.setLetterSpacing(0.10f);
-        hero.addView(badge);
-        hero.addView(text(s("hero_title"), 23, Color.WHITE, true), margin(-1, -2, dp(12), dp(7)));
-        TextView body = text(s("hero_body"), 13, Color.rgb(211, 219, 242), false);
-        body.setLineSpacing(dp(2), 1.0f);
-        hero.addView(body);
-        Button importButton = primaryButton("＋  " + s("import"));
-        importButton.setTextColor(Color.rgb(28, 31, 69));
-        importButton.setBackground(background(Color.WHITE, 14, Color.WHITE));
-        importButton.setOnClickListener(v -> showImportOptions());
-        hero.addView(importButton, margin(-1, dp(50), dp(18), 0));
-        page.addView(hero, margin(-1, -2, 0, dp(18)));
-    }
-
-    private void renderStatistics() {
-        LinearLayout stats = panel();
-        stats.setOrientation(LinearLayout.HORIZONTAL);
-        stats.setGravity(Gravity.CENTER_VERTICAL);
-        stats.setPadding(dp(17), dp(13), dp(17), dp(13));
+    private void renderCollectionSummary(LinearLayout container, int count) {
+        LinearLayout summary = panel();
+        summary.setOrientation(LinearLayout.HORIZONTAL);
+        summary.setGravity(Gravity.CENTER_VERTICAL);
+        summary.setPadding(dp(16), dp(12), dp(16), dp(12));
 
         LinearLayout countDetails = new LinearLayout(this);
         countDetails.setOrientation(LinearLayout.VERTICAL);
-        gameCount = text("0", 25, palette.primaryText, true);
+
+        gameCount = text(java.text.NumberFormat.getIntegerInstance(appLocale()).format(count),
+                25, palette.primaryText, true);
         countDetails.addView(gameCount);
         countDetails.addView(text(s("games_in_library"), 10, palette.secondaryText, true));
-        stats.addView(countDetails, new LinearLayout.LayoutParams(0, -2, 1));
+        summary.addView(countDetails, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        TextView platform = text("PSP", 12, palette.accent, true);
+        TextView platform = text("PSP", 11, palette.accent, true);
         platform.setGravity(Gravity.CENTER);
         platform.setBackground(background(palette.accentSoft, 12, palette.border));
-        stats.addView(platform, lp(dp(62), dp(42)));
-        page.addView(stats, margin(-1, -2, 0, dp(22)));
+        summary.addView(platform, lp(dp(58), dp(40)));
+
+        container.addView(summary, margin(-1, -2, 0, dp(16)));
     }
 
-    private void renderLibraryHeader() {
-        LinearLayout header = row();
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        header.addView(text(s("library"), 18, palette.primaryText, true),
-                new LinearLayout.LayoutParams(0, -2, 1));
-        header.addView(text(s("local_library"), 9, palette.secondaryText, true));
-        page.addView(header, margin(-1, -2, 0, dp(11)));
-
+    private void renderSearch(LinearLayout container) {
         searchField = new EditText(this);
         searchField.setSingleLine(true);
         searchField.setTextSize(14);
@@ -302,153 +273,187 @@ public final class MainActivity extends Activity {
         searchField.setHint(s("search"));
         searchField.setPadding(dp(16), 0, dp(16), 0);
         searchField.setBackground(background(palette.field, 15, palette.border));
-        searchField.setLayoutDirection(isArabic() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
-        searchField.setCompoundDrawablePadding(dp(8));
-        page.addView(searchField, margin(-1, dp(52), 0, dp(13)));
+        searchField.setLayoutDirection(isArabic()
+                ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
+        searchField.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+        searchField.setText(currentQuery);
+        container.addView(searchField, margin(-1, dp(52), 0, dp(12)));
+
         searchField.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence value, int start, int count, int after) { }
-            @Override public void onTextChanged(CharSequence value, int start, int before, int count) { renderLibraryItems(); }
+            @Override public void onTextChanged(CharSequence value, int start, int before, int count) {
+                currentQuery = value == null ? "" : value.toString();
+                refreshLibraryItems();
+            }
             @Override public void afterTextChanged(Editable value) { }
         });
     }
 
-    private void renderFilters() {
-        HorizontalScrollView horizontal = new HorizontalScrollView(this);
-        horizontal.setHorizontalScrollBarEnabled(false);
-        horizontal.setFillViewport(false);
-        LinearLayout chips = row();
-        String[][] values = {
-                {"ALL", s("all")},
-                {"FAVORITES", s("favorites")}
-        };
+    private void renderFilters(LinearLayout container) {
+        LinearLayout filters = row();
+        allFilterButton = smallButton(s("all"), "ALL".equals(activeFilter));
+        favoritesFilterButton = smallButton(s("favorites"), "FAVORITES".equals(activeFilter));
 
-        for (String[] item : values) {
-            final String filter = item[0];
-            Button chip = smallButton(item[1], filter.equals(activeFilter));
-            chip.setOnClickListener(v -> {
-                activeFilter = filter;
-                for (int i = 0; i < chips.getChildCount(); i++) {
-                    View child = chips.getChildAt(i);
-                    if (child instanceof Button) {
-                        styleChip((Button) child, filter.equals(child.getTag()));
-                    }
-                }
-                renderLibraryItems();
-            });
-            chip.setTag(filter);
-            LinearLayout.LayoutParams params = lp(-2, dp(48));
-            if (isArabic()) params.leftMargin = dp(8); else params.rightMargin = dp(8);
-            chips.addView(chip, params);
-        }
-        horizontal.addView(chips);
-        page.addView(horizontal, margin(-1, dp(48), 0, dp(12)));
-    }
-
-    private void renderGameList() {
-        gameList = new LinearLayout(this);
-        gameList.setOrientation(LinearLayout.VERTICAL);
-        page.addView(gameList);
-        renderLibraryItems();
-    }
-
-    private void renderLibraryItems() {
-        if (gameList == null) return;
-        gameList.removeAllViews();
-
-        String query = searchField == null || searchField.getText() == null
-                ? "" : searchField.getText().toString().trim().toLowerCase(Locale.ROOT);
-        List<GameEntry> all = database.getAllPsp();
-        int totalPsp = all.size();
-        int shown = 0;
-
-        for (GameEntry game : all) {
-
-            if ("FAVORITES".equals(activeFilter) && !game.isFavorite()) continue;
-            String name = game.getName() == null ? "" : game.getName();
-            if (!query.isEmpty() && !name.toLowerCase(Locale.ROOT).contains(query)) continue;
-            shown++;
-            gameList.addView(createGameCard(game), margin(-1, -2, 0, dp(10)));
-        }
-
-        if (gameCount != null) gameCount.setText(NumberFormat.getIntegerInstance(appLocale()).format(totalPsp));
-        if (shown == 0) {
-            LinearLayout empty = panel();
-            empty.setGravity(Gravity.CENTER);
-            empty.setPadding(dp(22), dp(28), dp(22), dp(28));
-            String title = totalPsp == 0 ? s("empty_title") : s("no_matches_title");
-            String body = totalPsp == 0 ? s("empty_body") : s("no_matches_body");
-            empty.addView(text(title, 16, palette.primaryText, true));
-            TextView explanation = text(body, 12, palette.secondaryText, false);
-            explanation.setGravity(Gravity.CENTER);
-            explanation.setLineSpacing(dp(3), 1.0f);
-            empty.addView(explanation, margin(-1, -2, dp(9), 0));
-            final boolean libraryIsEmpty = totalPsp == 0;
-            Button importButton = smallButton(libraryIsEmpty ? s("import") : s("clear_search"), true);
-            importButton.setOnClickListener(v -> {
-                if (libraryIsEmpty) showImportOptions();
-                else {
-                    activeFilter = "ALL";
-                    if (searchField != null) searchField.setText("");
-                    renderScreen();
-                }
-            });
-            empty.addView(importButton, margin(-2, dp(48), dp(12), 0));
-            gameList.addView(empty);
-        }
-    }
-
-    private LinearLayout createGameCard(GameEntry game) {
-        LinearLayout card = panel();
-        card.setOrientation(LinearLayout.HORIZONTAL);
-        card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setPadding(dp(12), dp(13), dp(12), dp(13));
-
-        TextView icon = text("PSP", 12, Color.WHITE, true);
-        icon.setGravity(Gravity.CENTER);
-        GradientDrawable iconBackground = new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.rgb(105, 91, 248), Color.rgb(52, 59, 142)});
-        iconBackground.setCornerRadius(dp(16));
-        icon.setBackground(iconBackground);
-        card.addView(icon, lp(dp(54), dp(58)));
-
-        LinearLayout details = new LinearLayout(this);
-        details.setOrientation(LinearLayout.VERTICAL);
-        details.setPadding(dp(12), 0, dp(6), 0);
-        String displayName = game.getName() == null || game.getName().trim().isEmpty()
-                ? s("unknown_game") : game.getName();
-        TextView title = text(displayName, 14, palette.primaryText, true);
-        title.setMaxLines(2);
-        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        details.addView(title);
-        String meta = game.getExtension().toUpperCase(Locale.ROOT)
-                + (game.getSizeBytes() > 0 ? "  •  " + formatSize(game.getSizeBytes()) : "");
-        details.addView(text(meta, 10, palette.secondaryText, false), margin(-1, -2, dp(5), 0));
-        card.addView(details, new LinearLayout.LayoutParams(0, -2, 1));
-
-        Button favorite = smallButton(game.isFavorite() ? "★" : "☆", false);
-        favorite.setContentDescription(s(game.isFavorite() ? "unfavorite" : "favorite"));
-        favorite.setOnClickListener(v -> {
-            database.setFavorite(game.getId(), !game.isFavorite());
-            renderLibraryItems();
+        allFilterButton.setOnClickListener(view -> {
+            activeFilter = "ALL";
+            styleFilterButtons();
+            refreshLibraryItems();
         });
-        card.addView(favorite, lp(dp(48), dp(48)));
+        favoritesFilterButton.setOnClickListener(view -> {
+            activeFilter = "FAVORITES";
+            styleFilterButtons();
+            refreshLibraryItems();
+        });
 
-        Button play = smallButton("▶", true);
-        play.setContentDescription(s("play"));
-        play.setOnClickListener(v -> launchPspGame(game));
-        card.addView(play, margin(dp(48), dp(48), 0, 0));
-        card.setOnClickListener(v -> showGameDetails(game));
-        card.setFocusable(true);
-        return card;
+        LinearLayout.LayoutParams filterParams = new LinearLayout.LayoutParams(0, dp(46), 1f);
+        filters.addView(allFilterButton, filterParams);
+        LinearLayout.LayoutParams favoriteParams = new LinearLayout.LayoutParams(0, dp(46), 1f);
+        if (isArabic()) favoriteParams.rightMargin = dp(8); else favoriteParams.leftMargin = dp(8);
+        filters.addView(favoritesFilterButton, favoriteParams);
+        container.addView(filters, margin(-1, -2, 0, dp(12)));
     }
 
-    private void renderFooter() {
-        TextView footer = text("NEXUS  •  " + (isArabic() ? "مكتبتك محلياً" : "YOUR LOCAL COLLECTION"),
-                9, palette.secondaryText, true);
-        footer.setGravity(Gravity.CENTER);
-        footer.setLetterSpacing(0.08f);
-        page.addView(footer, margin(-1, dp(28), dp(8), 0));
+    private void styleFilterButtons() {
+        if (allFilterButton == null || favoritesFilterButton == null) return;
+        styleFilter(allFilterButton, "ALL".equals(activeFilter));
+        styleFilter(favoritesFilterButton, "FAVORITES".equals(activeFilter));
+    }
+
+    private void styleFilter(Button button, boolean selected) {
+        button.setTextColor(selected ? Color.WHITE : palette.secondaryText);
+        button.setBackground(background(selected ? palette.accent : palette.surface,
+                14, selected ? palette.accent : palette.border));
+    }
+
+    private void renderListArea(LinearLayout container, List<GameEntry> initialGames) {
+        listFrame = new FrameLayout(this);
+        gameList = new ListView(this);
+        gameList.setDivider(new ColorDrawable(Color.TRANSPARENT));
+        gameList.setDividerHeight(dp(10));
+        gameList.setSelector(new ColorDrawable(Color.TRANSPARENT));
+        gameList.setCacheColorHint(Color.TRANSPARENT);
+        gameList.setClipToPadding(false);
+        gameList.setPadding(0, 0, 0, dp(8));
+        gameList.setBackgroundColor(Color.TRANSPARENT);
+
+        gameAdapter = new GameListAdapter(this, palette, isArabic(),
+                new GameListAdapter.Listener() {
+                    @Override public void onGameClick(GameEntry game) {
+                        showGameDetails(game);
+                    }
+
+                    @Override public void onFavoriteClick(GameEntry game) {
+                        database.setFavorite(game.getId(), !game.isFavorite());
+                        refreshLibraryItems();
+                    }
+
+                    @Override public void onPlayClick(GameEntry game) {
+                        launchPspGame(game);
+                    }
+                });
+        gameAdapter.setGames(initialGames);
+        gameList.setAdapter(gameAdapter);
+        gameList.setOnItemClickListener((parent, view, position, id) ->
+                showGameDetails(gameAdapter.getItem(position)));
+        listFrame.addView(gameList, new FrameLayout.LayoutParams(-1, -1));
+
+        emptyState = createEmptyState(false);
+        emptyState.setVisibility(View.GONE);
+        listFrame.addView(emptyState, new FrameLayout.LayoutParams(-1, -1));
+
+        container.addView(listFrame, new LinearLayout.LayoutParams(-1, 0, 1f));
+        refreshLibraryItems();
+    }
+
+    private LinearLayout createEmptyState(boolean firstRun) {
+        LinearLayout state = new LinearLayout(this);
+        state.setOrientation(LinearLayout.VERTICAL);
+        state.setGravity(Gravity.CENTER);
+        state.setPadding(dp(24), dp(22), dp(24), dp(22));
+        state.setBackgroundColor(Color.TRANSPARENT);
+
+        TextView mark = text("PSP", 18, Color.WHITE, true);
+        mark.setGravity(Gravity.CENTER);
+        GradientDrawable markBackground = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(139, 124, 255), Color.rgb(65, 79, 163)});
+        markBackground.setCornerRadius(dp(24));
+        mark.setBackground(markBackground);
+        state.addView(mark, lp(dp(82), dp(82)));
+
+        emptyTitle = text(firstRun ? s("empty_title") : s("no_matches_title"),
+                18, palette.primaryText, true);
+        emptyTitle.setGravity(Gravity.CENTER);
+        emptyTitle.setMaxLines(2);
+        state.addView(emptyTitle, margin(-1, -2, dp(20), dp(8)));
+
+        emptyBody = text(firstRun ? s("empty_body") : s("no_matches_body"),
+                12, palette.secondaryText, false);
+        emptyBody.setGravity(Gravity.CENTER);
+        emptyBody.setLineSpacing(dp(3), 1f);
+        emptyBody.setMaxWidth(dp(320));
+        state.addView(emptyBody, lp(-1, -2));
+
+        emptyAction = smallButton(s("clear_search"), true);
+        emptyAction.setOnClickListener(view -> {
+            activeFilter = "ALL";
+            currentQuery = "";
+            if (searchField != null) searchField.setText("");
+            styleFilterButtons();
+            refreshLibraryItems();
+        });
+        if (firstRun) emptyAction.setVisibility(View.GONE);
+        else state.addView(emptyAction, margin(-2, dp(48), dp(18), 0));
+
+        return state;
+    }
+
+    private void renderImportFooter(LinearLayout container) {
+        LinearLayout footer = new LinearLayout(this);
+        footer.setOrientation(LinearLayout.VERTICAL);
+        footer.setPadding(0, dp(12), 0, 0);
+
+        Button importButton = primaryButton("＋  " + s("import"));
+        importButton.setOnClickListener(view -> showImportOptions());
+        footer.addView(importButton, lp(-1, dp(56)));
+
+        TextView formats = text(s("supported_formats"), 9, palette.secondaryText, true);
+        formats.setGravity(Gravity.CENTER);
+        formats.setLetterSpacing(0.06f);
+        footer.addView(formats, margin(-1, dp(20), dp(5), 0));
+
+        container.addView(footer, lp(-1, -2));
+    }
+
+    private void refreshLibraryItems() {
+        if (gameList == null || gameAdapter == null || listFrame == null) return;
+
+        List<GameEntry> all = database.getAllPsp();
+        if (all.isEmpty()) {
+            currentQuery = "";
+            activeFilter = "ALL";
+            renderScreen();
+            return;
+        }
+
+        if (gameCount != null) {
+            gameCount.setText(java.text.NumberFormat.getIntegerInstance(appLocale()).format(all.size()));
+        }
+
+        List<GameEntry> filtered = GameLibraryFilter.filter(
+                all, currentQuery, "FAVORITES".equals(activeFilter));
+        gameAdapter.setGames(filtered);
+
+        boolean hasResults = !filtered.isEmpty();
+        gameList.setVisibility(hasResults ? View.VISIBLE : View.GONE);
+        emptyState.setVisibility(hasResults ? View.GONE : View.VISIBLE);
+
+        if (!hasResults) {
+            emptyTitle.setText(s("no_matches_title"));
+            emptyBody.setText(s("no_matches_body"));
+            emptyAction.setText(s("clear_search"));
+            emptyAction.setVisibility(View.VISIBLE);
+        }
     }
 
     private void showImportOptions() {
@@ -461,7 +466,8 @@ public final class MainActivity extends Activity {
         intent.setType("*/*");
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         try {
             startActivityForResult(intent, REQUEST_IMPORT_FILES);
         } catch (Exception error) {
@@ -478,7 +484,6 @@ public final class MainActivity extends Activity {
         pendingFiles.clear();
         pendingGrantFlags = data.getFlags()
                 & (Intent.FLAG_GRANT_READ_URI_PERMISSION
-                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         if (data.getClipData() != null) {
             for (int i = 0; i < data.getClipData().getItemCount(); i++) {
@@ -488,6 +493,7 @@ public final class MainActivity extends Activity {
         } else if (data.getData() != null) {
             pendingFiles.add(data.getData());
         }
+
         if (pendingFiles.isEmpty()) {
             toast(s("no_files_selected"));
             return;
@@ -511,64 +517,80 @@ public final class MainActivity extends Activity {
         final ContentResolver resolver = getApplicationContext().getContentResolver();
         final android.content.Context appContext = getApplicationContext();
 
-        importExecutor.execute(() -> {
-            int imported = 0;
-            int duplicates = 0;
-            int rejected = 0;
-            int processed = 0;
-            GameDatabase importDatabase = null;
+        try {
+            importExecutor.execute(() -> {
+                int imported = 0;
+                int duplicates = 0;
+                int rejected = 0;
+                int processed = 0;
+                GameDatabase importDatabase = null;
 
-            try {
-                importDatabase = new GameDatabase(appContext);
-                for (Uri uri : selectedFiles) {
-                    processed++;
-                    try {
-                        String name = queryDisplayName(resolver, uri);
-                        String extension = GameFileClassifier.extensionOf(name);
+                try {
+                    importDatabase = new GameDatabase(appContext);
+                    for (Uri uri : selectedFiles) {
+                        processed++;
+                        try {
+                            String name = queryDisplayName(resolver, uri);
+                            String extension = GameFileClassifier.extensionOf(name);
 
-                        if (!GameFileClassifier.isSupportedPspExtension(extension)
-                                || !persistReadPermission(resolver, uri, grantFlags)) {
+                            if (!GameFileClassifier.isSupportedPspExtension(extension)) {
+                                rejected++;
+                                continue;
+                            }
+                            if (importDatabase.containsUri(uri.toString())) {
+                                duplicates++;
+                                continue;
+                            }
+                            if (!persistReadPermission(resolver, uri, grantFlags)) {
+                                rejected++;
+                                continue;
+                            }
+
+                            int result = storeGame(importDatabase, uri, name,
+                                    GameFileClassifier.PSP, extension, querySize(resolver, uri));
+                            if (result > 0) {
+                                imported++;
+                            } else if (result == 0) {
+                                duplicates++;
+                            } else {
+                                rejected++;
+                                if (!importDatabase.containsUri(uri.toString())) {
+                                    releaseReadPermission(resolver, uri);
+                                }
+                            }
+                        } catch (RuntimeException error) {
                             rejected++;
-                            continue;
                         }
-
-                        int result = storeGame(importDatabase, uri, name,
-                                GameFileClassifier.PSP, extension, querySize(resolver, uri));
-                        if (result > 0) imported++;
-                        else if (result == 0) duplicates++;
-                        else rejected++;
-                    } catch (RuntimeException error) {
-                        rejected++;
                     }
+                } catch (RuntimeException error) {
+                    rejected += selectedFiles.size() - processed;
+                } finally {
+                    if (importDatabase != null) importDatabase.close();
                 }
-            } catch (RuntimeException error) {
-                rejected += selectedFiles.size() - processed;
-            } finally {
-                if (importDatabase != null) importDatabase.close();
-            }
 
-            final int importedCount = imported;
-            final int duplicateCount = duplicates;
-            final int rejectedCount = rejected;
-            final String summary = String.format(resultLocale, summaryPattern,
-                    importedCount, duplicateCount, rejectedCount);
+                final int importedCount = imported;
+                final int duplicateCount = duplicates;
+                final int rejectedCount = rejected;
+                final String summary = String.format(resultLocale, summaryPattern,
+                        importedCount, duplicateCount, rejectedCount);
 
-            MAIN_HANDLER.post(() -> {
-                MainActivity active = resumedActivity.get();
-                if (active != null && !active.isFinishing() && !active.isDestroyed()) {
-                    active.renderLibraryItems();
-                    active.toast(summary);
-                }
+                MAIN_HANDLER.post(() -> {
+                    MainActivity active = resumedActivity.get();
+                    if (active != null && !active.isFinishing() && !active.isDestroyed()) {
+                        active.renderScreen();
+                        active.toast(summary);
+                    }
+                });
             });
-        });
+        } catch (RejectedExecutionException error) {
+            toast(s("import_error"));
+        }
     }
 
     private static boolean persistReadPermission(
             ContentResolver resolver, Uri uri, int grantFlags) {
-        int required = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION;
-        if (resolver == null || uri == null || !"content".equals(uri.getScheme())
-                || (grantFlags & required) != required) {
+        if (resolver == null || uri == null
+                || !UriGrantPolicy.canPersistReadPermission(grantFlags, uri.getScheme())) {
             return false;
         }
         try {
@@ -580,6 +602,16 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private static void releaseReadPermission(ContentResolver resolver, Uri uri) {
+        if (resolver == null || uri == null) return;
+        try {
+            resolver.releasePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (SecurityException | IllegalArgumentException ignored) {
+            // The provider may have already revoked the grant.
+        }
+    }
+
     private static int storeGame(GameDatabase targetDatabase, Uri uri, String name,
                                  String platform, String extension, long size) {
         if (targetDatabase == null || uri == null || !"content".equals(uri.getScheme())
@@ -587,7 +619,8 @@ public final class MainActivity extends Activity {
                 || !GameFileClassifier.isSupportedPspExtension(extension)) {
             return -1;
         }
-        String safeName = name == null || name.trim().isEmpty() ? "PSP game." + extension : name.trim();
+        String safeName = name == null || name.trim().isEmpty()
+                ? "PSP game." + extension : name.trim();
         try {
             return targetDatabase.insert(safeName, GameFileClassifier.PSP, uri.toString(),
                     extension, size, System.currentTimeMillis()) ? 1 : 0;
@@ -608,10 +641,10 @@ public final class MainActivity extends Activity {
                 }
             }
         } catch (Exception ignored) {
-            // Use the URI as a display-name fallback.
+            // Use the URI path as a display-name fallback.
         }
         String fallback = uri.getLastPathSegment();
-        return fallback == null ? "Imported game" : fallback;
+        return fallback == null ? "Imported game" : Uri.decode(fallback);
     }
 
     private static long querySize(ContentResolver resolver, Uri uri) {
@@ -620,15 +653,18 @@ public final class MainActivity extends Activity {
                 new String[]{OpenableColumns.SIZE}, null, null, null)) {
             if (cursor != null && cursor.moveToFirst()) {
                 int index = cursor.getColumnIndex(OpenableColumns.SIZE);
-                if (index >= 0 && !cursor.isNull(index)) return Math.max(0L, cursor.getLong(index));
+                if (index >= 0 && !cursor.isNull(index)) {
+                    return Math.max(0L, cursor.getLong(index));
+                }
             }
         } catch (Exception ignored) {
-            // Size is optional metadata.
+            // File size is optional metadata.
         }
         return 0L;
     }
 
     private void showGameDetails(GameEntry game) {
+        if (game == null) return;
         StringBuilder message = new StringBuilder();
         message.append(s("platform")).append(": PSP").append('\n');
         message.append(s("file_type")).append(": ")
@@ -637,13 +673,15 @@ public final class MainActivity extends Activity {
             message.append(s("size")).append(": ").append(formatSize(game.getSizeBytes())).append('\n');
         }
         message.append('\n').append(s("psp_ready_body"));
+
+        String title = game.getName() == null ? s("unknown_game") : game.getName();
         new AlertDialog.Builder(this)
-                .setTitle(s("details") + " — " + game.getName())
+                .setTitle(s("details") + " — " + title)
                 .setMessage(message.toString())
                 .setPositiveButton(s("play"), (dialog, which) -> launchPspGame(game))
                 .setNeutralButton(s(game.isFavorite() ? "unfavorite" : "favorite"), (dialog, which) -> {
                     database.setFavorite(game.getId(), !game.isFavorite());
-                    renderLibraryItems();
+                    refreshLibraryItems();
                 })
                 .setNegativeButton(s("remove"), (dialog, which) -> confirmRemove(game))
                 .show();
@@ -682,13 +720,9 @@ public final class MainActivity extends Activity {
                 .setNegativeButton(s("cancel"), null)
                 .setPositiveButton(s("remove"), (dialog, which) -> {
                     if (database.delete(game.getId())) {
-                        try {
-                            getContentResolver().releasePersistableUriPermission(
-                                    Uri.parse(game.getUri()), Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        } catch (SecurityException | IllegalArgumentException ignored) {
-                            // The provider may have already revoked the grant.
-                        }
-                        renderLibraryItems();
+                        releaseReadPermission(getContentResolver(), Uri.parse(game.getUri()));
+                        if ("FAVORITES".equals(activeFilter)) refreshLibraryItems();
+                        else renderScreen();
                     }
                 })
                 .show();
@@ -729,13 +763,15 @@ public final class MainActivity extends Activity {
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setBackground(background(palette.surface, 18, palette.border));
+        layout.setElevation(dp(1));
         return layout;
     }
 
     private LinearLayout row() {
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.HORIZONTAL);
-        layout.setLayoutDirection(isArabic() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
+        layout.setLayoutDirection(isArabic()
+                ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
         return layout;
     }
 
@@ -754,11 +790,12 @@ public final class MainActivity extends Activity {
         Button button = new Button(this);
         button.setText(value);
         button.setTextColor(Color.WHITE);
-        button.setTextSize(13);
+        button.setTextSize(14);
         button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         button.setAllCaps(false);
-        button.setMinHeight(dp(48));
-        button.setBackground(background(palette.accent, 14, palette.accent));
+        button.setGravity(Gravity.CENTER);
+        button.setMinHeight(dp(56));
+        button.setBackground(background(palette.accent, 16, palette.accent));
         return button;
     }
 
@@ -766,18 +803,15 @@ public final class MainActivity extends Activity {
         Button button = new Button(this);
         button.setText(value);
         button.setTextColor(selected ? Color.WHITE : palette.secondaryText);
-        button.setTextSize(11);
+        button.setTextSize(12);
         button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         button.setAllCaps(false);
+        button.setGravity(Gravity.CENTER);
         button.setMinHeight(dp(48));
         button.setPadding(dp(12), 0, dp(12), 0);
-        button.setBackground(background(selected ? palette.accent : palette.surface, 13, palette.border));
+        button.setBackground(background(selected ? palette.accent : palette.surface,
+                14, selected ? palette.accent : palette.border));
         return button;
-    }
-
-    private void styleChip(Button button, boolean selected) {
-        button.setTextColor(selected ? Color.WHITE : palette.secondaryText);
-        button.setBackground(background(selected ? palette.accent : palette.surface, 13, palette.border));
     }
 
     private GradientDrawable background(int color, int radius, int stroke) {
@@ -805,8 +839,12 @@ public final class MainActivity extends Activity {
 
     private String formatSize(long bytes) {
         if (bytes < 1024L) return bytes + " B";
-        if (bytes < 1024L * 1024L) return String.format(Locale.US, "%.1f KB", bytes / 1024.0);
-        if (bytes < 1024L * 1024L * 1024L) return String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0));
+        if (bytes < 1024L * 1024L) {
+            return String.format(Locale.US, "%.1f KB", bytes / 1024.0);
+        }
+        if (bytes < 1024L * 1024L * 1024L) {
+            return String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0));
+        }
         return String.format(Locale.US, "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
     }
 

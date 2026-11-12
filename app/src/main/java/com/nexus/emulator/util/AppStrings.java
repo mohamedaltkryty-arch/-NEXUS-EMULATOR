@@ -7,25 +7,25 @@ public final class AppStrings {
     private static final Map<String, String[]> VALUES = new HashMap<>();
 
     static {
-        put("tagline", "ألعابك. مكتبتك. انطلق.", "YOUR GAMES. ONE LIBRARY.");
-        put("hero_title", "مكتبتك جاهزة للعب", "Your PSP collection, ready to play.");
-        put("hero_body", "استورد ألعاب PSP الخاصة بك، رتّبها وشغّلها من مكان واحد.", "Import, organize and launch your PSP games from one place.");
-        put("import", "استيراد ألعاب", "IMPORT GAMES");
+        put("tagline", "مكتبة ألعابك، بدون تعقيد", "YOUR PSP COLLECTION, SIMPLIFIED");
+        put("hero_title", "ابدأ مكتبتك", "Start your collection");
+        put("hero_body", "أضف ألعاب PSP التي تملكها، واحتفظ بها مرتبة في مكان واحد.", "Add the PSP games you own and keep them organized in one place.");
+        put("import", "استيراد ألعاب PSP", "IMPORT PSP GAMES");
         put("import_file", "استيراد ملف لعبة", "Import a game file");
         put("import_folder", "استيراد مجلد لعبة PC أو PS3", "Import a PC or PS3 game folder");
-        put("library", "مكتبة الألعاب", "GAME LIBRARY");
-        put("search", "ابحث عن لعبة...", "Search games...");
+        put("library", "مكتبتك", "YOUR LIBRARY");
+        put("search", "ابحث عن لعبة...", "Search your games...");
         put("all", "الكل", "ALL");
         put("pc", "PC", "PC");
         put("psp", "PSP", "PSP");
         put("ps2", "PS2", "PS2");
         put("ps3", "PS3", "PS3");
-        put("empty_title", "مكتبتك فارغة حالياً", "Your library is empty");
-        put("empty_body", "استورد ملفات ألعابك لتظهر هنا.", "Import your game files to see them here.");
+        put("empty_title", "ابدأ مكتبة ألعابك", "Start your game collection");
+        put("empty_body", "استورد ملفات ألعاب PSP التي تملكها لتظهر هنا. يدعم NEXUS صيغ ISO وCSO وPBP وZSO.", "Import PSP game files you own. NEXUS supports ISO, CSO, PBP and ZSO.");
         put("engines", "محركات المحاكاة", "EMULATOR ENGINES");
         put("settings", "الإعدادات", "SETTINGS");
         put("language", "اللغة", "Language");
-        put("theme", "المظهر", "Theme");
+        put("theme", "المظهر", "Appearance");
         put("dark", "داكن", "Dark");
         put("light", "فاتح", "Light");
         put("arabic", "العربية", "Arabic");
@@ -53,12 +53,12 @@ public final class AppStrings {
         put("engine_status", "حالة المحرك", "Engine status");
         put("source_only", "المصدر متاح — الدمج قيد التطوير", "Source available — integration in progress");
         put("about", "حول NEXUS", "About NEXUS");
-        put("about_body", "NEXUS يجمع ألعابك في مكتبة واحدة. تشغيل ألعاب PSP يتم عبر PPSSPP الرسمي، ولا يتضمن التطبيق ألعاباً أو BIOS أو Firmware.", "NEXUS brings your games together in one library. PSP playback uses the official PPSSPP app. Games, BIOS and firmware are not included.");
+        put("about_body", "NEXUS ينظم مكتبة ألعاب PSP محلياً. تشغيل الألعاب يتم عبر تطبيق PPSSPP الرسمي. لا يتضمن التطبيق ألعاباً أو BIOS أو Firmware.", "NEXUS organizes your PSP collection locally. Playback uses the official PPSSPP app. No games, BIOS or firmware are included.");
         put("pc_folder_tip", "استورد مجلد اللعبة كاملاً، لا ملف EXE وحده.", "Import the complete game folder, not only the EXE file.");
         put("engines_count", "أربعة مصادر محركات مرتبطة", "Four engine sources linked");
         put("play", "تشغيل", "Play");
         put("psp_ready_body", "يمكن تشغيل ألعاب PSP باستخدام تطبيق PPSSPP الرسمي المثبّت على جهازك.", "PSP games can be played with the official PPSSPP app installed on your device.");
-        put("psp_engine_missing_title", "محرك PSP غير مثبت", "PSP engine not installed");
+        put("psp_engine_missing_title", "تطبيق PPSSPP غير مثبت", "PPSSPP is not installed");
         put("psp_engine_missing_body", "ثبّت تطبيق PPSSPP الرسمي أولاً، ثم ارجع إلى NEXUS واضغط تشغيل.", "Install the official PPSSPP app, then return to NEXUS and tap Play.");
         put("install_engine", "تنزيل PPSSPP", "Get PPSSPP");
         put("launch_error", "تعذر فتح اللعبة. تحقق من الملف وصلاحية الوصول.", "Could not open the game. Check the file and access permission.");
@@ -67,7 +67,7 @@ public final class AppStrings {
         put("games_in_library", "لعبة في مكتبتك", "GAMES IN YOUR LIBRARY");
         put("local_library", "محفوظة على جهازك", "SAVED ON DEVICE");
         put("no_matches_title", "ما لقينا نتائج", "No matching games");
-        put("no_matches_body", "جرّب كلمة بحث أخرى أو ارجع إلى كل الألعاب.", "Try another search or switch back to all games.");
+        put("no_matches_body", "جرّب كلمة بحث ثانية أو اعرض كل الألعاب.", "Try another search or switch back to all games.");
         put("clear_search", "عرض كل الألعاب", "Show all games");
         put("unknown_game", "لعبة PSP", "PSP Game");
         put("file_picker_error", "تعذر فتح مدير الملفات على هذا الجهاز.", "Could not open the file picker on this device.");
@@ -75,10 +75,13 @@ public final class AppStrings {
         put("import_error", "تعذر إضافة الملف. تحقق من مساحة الجهاز وصلاحية الوصول.", "Could not add this file. Check device storage and file access.");
         put("import_summary", "اكتمل الاستيراد: %1$d أُضيفت، %2$d مكررة، %3$d مرفوضة.", "Import complete: %1$d added, %2$d duplicates, %3$d skipped.");
         put("importing", "جارٍ استيراد الألعاب...", "Importing games...");
+        put("supported_formats", "ISO  •  CSO  •  PBP  •  ZSO", "ISO  •  CSO  •  PBP  •  ZSO");
     }
 
     private AppStrings() { }
-    private static void put(String key, String arabic, String english) { VALUES.put(key, new String[]{arabic, english}); }
+    private static void put(String key, String arabic, String english) {
+        VALUES.put(key, new String[]{arabic, english});
+    }
     public static String get(String key, boolean arabic) {
         String[] values = VALUES.get(key);
         return values == null ? key : values[arabic ? 0 : 1];

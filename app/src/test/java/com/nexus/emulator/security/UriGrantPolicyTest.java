@@ -13,6 +13,7 @@ public final class UriGrantPolicyTest {
                 | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION;
 
         assertTrue(UriGrantPolicy.canPersistReadPermission(validFlags, "content"));
+        assertTrue(UriGrantPolicy.canPersistReadPermission(validFlags, "CONTENT"));
         assertFalse(UriGrantPolicy.canPersistReadPermission(Intent.FLAG_GRANT_READ_URI_PERMISSION, "content"));
         assertFalse(UriGrantPolicy.canPersistReadPermission(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION, "content"));
         assertFalse(UriGrantPolicy.canPersistReadPermission(validFlags, "file"));

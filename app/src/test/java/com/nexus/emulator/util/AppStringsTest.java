@@ -19,7 +19,7 @@ public final class AppStringsTest {
             "light", "local_library", "no_files_selected", "no_matches_body",
             "no_matches_title", "ok", "platform", "play", "psp_engine_missing_body",
             "psp_engine_missing_title", "psp_ready_body", "remove", "search",
-            "settings", "size", "theme", "unknown_game"
+            "settings", "size", "theme", "unknown_game", "supported_formats"
     };
 
     @Test

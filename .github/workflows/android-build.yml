@@ -59,6 +59,7 @@ jobs:
           test -f app/build.gradle
           test -f settings.gradle
           ! grep -q 'android.permission.INTERNET' app/src/main/AndroidManifest.xml
+          ! grep -Eq 'READ_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE|MANAGE_EXTERNAL_STORAGE' app/src/main/AndroidManifest.xml
       - name: Run JVM tests and Android lint
         run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug
       - name: Publish lint diagnostics to job log
@@ -71,7 +72,7 @@ jobs:
   build:
     name: Build and verify installable APK
     needs: verify
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_apk == true }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.build_apk == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[build-apk]')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -111,12 +112,12 @@ jobs:
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
           mkdir -p artifacts
-          cp "$APK" "artifacts/NEXUS-EMULATOR-v0.7.0-debug.apk"
-          sha256sum "artifacts/NEXUS-EMULATOR-v0.7.0-debug.apk" | tee artifacts/SHA256SUMS.txt
+          cp "$APK" "artifacts/NEXUS-EMULATOR-v0.8.0-debug.apk"
+          sha256sum "artifacts/NEXUS-EMULATOR-v0.8.0-debug.apk" | tee artifacts/SHA256SUMS.txt
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: nexus-emulator-v0.7.0-debug-apk
+          name: nexus-emulator-v0.8.0-debug-apk
           path: artifacts/*
           if-no-files-found: error
           retention-days: 14
@@ -124,23 +125,23 @@ jobs:
   emulator-smoke:
     name: Install and launch on Android emulator
     needs: build
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_apk == true }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.build_apk == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[build-apk]')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Download verified APK
         uses: actions/download-artifact@v4
         with:
-          name: nexus-emulator-v0.7.0-debug-apk
+          name: nexus-emulator-v0.8.0-debug-apk
           path: artifacts
       - name: Install and launch NEXUS
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 36
           arch: x86_64
           profile: pixel_2
           script: |
-            adb install -r artifacts/NEXUS-EMULATOR-v0.7.0-debug.apk
+            adb install -r artifacts/NEXUS-EMULATOR-v0.8.0-debug.apk
             adb shell am force-stop com.nexus.emulator.debug
             adb shell am start -W -n com.nexus.emulator.debug/com.nexus.emulator.MainActivity
             sleep 3

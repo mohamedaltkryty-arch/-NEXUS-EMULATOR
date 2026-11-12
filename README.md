@@ -1,45 +1,58 @@
-# NEXUS
+# NEXUS 0.8.0
 
-NEXUS is a polished, offline-first Android companion for a personal PSP game collection.
+NEXUS is a focused, offline-first Android companion for a personal PSP game collection. It keeps the everyday actions in one clean library: import, search, favorite, inspect, remove, and launch.
 
-## What works in this build
+## Active features
 
-- Import one or multiple PSP game files using Android's Storage Access Framework.
+- Import one or multiple PSP game files with Android's Storage Access Framework.
 - Supported formats: ISO, CSO, PBP and ZSO.
-- SQLite uses a versioned, non-destructive schema upgrade with an indexed PSP-only query; historical non-PSP rows are retained but not loaded into the active library.
-- Persist only the read permission granted by the selected document provider.
-- Browse a local SQLite library, search by game name, filter favorites, view file details, remove entries and launch games.
-- Arabic RTL by default and English language switch.
-- Dark and light themes.
-- PSP playback handoff to the official PPSSPP Android app (standard or Gold).
-- No user account, ads, analytics, remote API, broad storage permission or app-side file uploads.
+- Local SQLite library with a non-destructive schema migration and indexed PSP queries.
+- Persisted read-only document access when the selected provider grants it.
+- Search, All/Favorites filters, game details, favorite toggles, remove, and launch.
+- Recycled game rows for smoother scrolling with larger libraries.
+- Arabic RTL by default, English, dark and light themes.
+- A focused home screen that hides search and filters until the first game is added.
+- A persistent import action and clear empty/no-results states.
 
-## Deliberately hidden capabilities
+## Playback boundary
 
-PS2, PS3 and Windows game playback are not integrated into NEXUS. Their old catalogue entries are retained in the local database but excluded from the visible library and import flow. NEXUS does not claim that those systems are playable.
+PSP playback is handed to the official PPSSPP Android application (standard or Gold). NEXUS validates the selected content URI before launching and grants PPSSPP temporary read access. It does not embed a PPSSPP core.
 
-The Java frontend does not embed a PPSSPP core. It opens the user-selected PSP file in an independently installed official PPSSPP app. Runtime compatibility is controlled by the device's CPU, GPU, Android version, PPSSPP build and individual game.
+PS2, PS3 and Windows/PC runtimes are not integrated. Their historical source references are not packaged binaries and those platforms are hidden from the active app. NEXUS does not claim they are playable.
+
+## Privacy and security
+
+- No account, ads, analytics, telemetry, remote API or INTERNET permission.
+- No broad storage permission.
+- Game files remain with the document provider selected by the user; NEXUS stores metadata and content URIs locally.
+- Persisted read permission is taken only when Android returns both read and persistable grant flags.
+- Duplicate imports are detected before taking another persisted grant.
+- If an insert fails, a newly taken grant is released when no library row references that URI.
+- App backup is disabled.
+- NEXUS does not distribute games, BIOS, firmware, encryption keys or proprietary SDKs.
 
 ## Android compatibility
 
-- Frontend: Android 6.0 (API 23) and newer.
-- Compile/target SDK: 36.
+- Minimum Android: 6.0 (API 23).
+- Compile SDK / target SDK: 36.
 - Java: 17.
-- No ABI filter on the Java frontend.
-- External PPSSPP runtime must support the device ABI and graphics driver.
+- Android Gradle Plugin: 8.10.1.
+- Gradle: 8.11.1.
 
-## Build and verification
+## Verification and build
 
-Requirements: JDK 17, Android SDK Platform 36, Build Tools 36.0.0, Android Gradle Plugin 8.10.1 and Gradle 8.11.1.
+Run JVM tests and Android lint:
 
-Build commands: `gradle --no-daemon :app:testDebugUnitTest`, then `gradle --no-daemon :app:assembleDebug`.
+```bash
+gradle --no-daemon :app:testDebugUnitTest :app:lintDebug
+```
 
-APK output: `app/build/outputs/apk/debug/app-debug.apk`.
+Build the installable debug APK only after verification:
 
-GitHub Actions runs source checks, JVM tests and Android lint first. Only after they pass does it build and verify the installable APK, then install and launch it on an Android emulator. The v0.7.0 debug APK is signed with the standard debug certificate for direct device testing; it is not a Play Store release signed with a private production key.
+```bash
+gradle --no-daemon :app:assembleDebug
+```
 
-## Privacy and legal boundary
+GitHub Actions runs source/privacy checks, JVM tests and Android lint on pushes and pull requests. APK packaging and emulator installation are gated: they run only through a manual workflow dispatch with build_apk=true or a final commit whose message contains [build-apk]. The build job depends on successful verification.
 
-NEXUS does not distribute commercial game files, console firmware, BIOS images or encryption keys. Import only games you are legally entitled to use. Files remain with the selected document provider; NEXUS stores document URIs and metadata locally.
-
-The upstream engine source references are not bundled runtime binaries. See docs/ENGINE_INTEGRATION.md for their current status and licenses.
+The debug APK is signed with Android's standard debug certificate for device testing. It is not a Play Store release signed with a private production key. PSP compatibility still depends on the device, PPSSPP build, graphics driver and individual game.
