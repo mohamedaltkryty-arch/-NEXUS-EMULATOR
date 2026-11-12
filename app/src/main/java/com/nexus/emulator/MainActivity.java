@@ -238,7 +238,7 @@ public final class MainActivity extends Activity {
         Button settingsButton = smallButton("⚙", false);
         settingsButton.setContentDescription(s("settings"));
         settingsButton.setOnClickListener(v -> showSettings());
-        header.addView(settingsButton, lp(dp(46), dp(46)));
+        header.addView(settingsButton, lp(dp(48), dp(48)));
         page.addView(header, margin(-1, -2, 0, dp(18)));
     }
 
@@ -336,7 +336,7 @@ public final class MainActivity extends Activity {
                 renderLibraryItems();
             });
             chip.setTag(filter);
-            LinearLayout.LayoutParams params = lp(-2, dp(38));
+            LinearLayout.LayoutParams params = lp(-2, dp(48));
             if (isArabic()) params.leftMargin = dp(8); else params.rightMargin = dp(8);
             chips.addView(chip, params);
         }
@@ -436,12 +436,12 @@ public final class MainActivity extends Activity {
             database.setFavorite(game.getId(), !game.isFavorite());
             renderLibraryItems();
         });
-        card.addView(favorite, lp(dp(40), dp(42)));
+        card.addView(favorite, lp(dp(48), dp(48)));
 
         Button play = smallButton("▶", true);
         play.setContentDescription(s("play"));
         play.setOnClickListener(v -> launchPspGame(game));
-        card.addView(play, margin(dp(42), dp(42), 0, 0));
+        card.addView(play, margin(dp(48), dp(48), 0, 0));
         card.setOnClickListener(v -> showGameDetails(game));
         card.setFocusable(true);
         return card;
@@ -773,7 +773,7 @@ public final class MainActivity extends Activity {
         button.setTextSize(11);
         button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         button.setAllCaps(false);
-        button.setMinHeight(dp(40));
+        button.setMinHeight(dp(48));
         button.setPadding(dp(12), 0, dp(12), 0);
         button.setBackground(background(selected ? palette.accent : palette.surface, 13, palette.border));
         return button;
