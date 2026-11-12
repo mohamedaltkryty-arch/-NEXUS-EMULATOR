@@ -74,6 +74,7 @@ public final class AppStrings {
         put("no_files_selected", "لم يتم اختيار أي ملف.", "No files were selected.");
         put("import_error", "تعذر إضافة الملف. تحقق من مساحة الجهاز وصلاحية الوصول.", "Could not add this file. Check device storage and file access.");
         put("import_summary", "اكتمل الاستيراد: %1$d أُضيفت، %2$d مكررة، %3$d مرفوضة.", "Import complete: %1$d added, %2$d duplicates, %3$d skipped.");
+        put("importing", "جارٍ استيراد الألعاب...", "Importing games...");
     }
 
     private AppStrings() { }
