@@ -9,12 +9,15 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Build;
 import android.provider.OpenableColumns;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
@@ -112,9 +115,30 @@ public final class MainActivity extends Activity {
     private void applySystemBars() {
         Window window = getWindow();
         boolean dark = settings.isDarkTheme();
-        window.setStatusBarColor(dark ? Color.rgb(10, 12, 19) : Color.rgb(245, 247, 251));
-        window.setNavigationBarColor(dark ? Color.rgb(10, 12, 19) : Color.rgb(245, 247, 251));
-        int flags = dark ? 0 : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (Build.VERSION.SDK_INT < 35) {
+                window.setDecorFitsSystemWindows(false);
+            }
+            window.setStatusBarColor(Color.TRANSPARENT);
+            window.setNavigationBarColor(Color.TRANSPARENT);
+            window.setStatusBarContrastEnforced(false);
+            window.setNavigationBarContrastEnforced(false);
+
+            WindowInsetsController controller = window.getInsetsController();
+            if (controller != null) {
+                int lightBars = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                        | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                controller.setSystemBarsAppearance(dark ? 0 : lightBars, lightBars);
+            }
+            return;
+        }
+
+        int barColor = dark ? Color.rgb(8, 12, 22) : Color.rgb(244, 247, 252);
+        window.setStatusBarColor(barColor);
+        window.setNavigationBarColor(barColor);
+        int flags = dark ? 0
+                : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
         window.getDecorView().setSystemUiVisibility(flags);
     }
 
@@ -125,6 +149,14 @@ public final class MainActivity extends Activity {
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         scroll.setBackgroundColor(palette.background);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            scroll.setOnApplyWindowInsetsListener((view, insets) -> {
+                int insetTypes = WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout();
+                android.graphics.Insets safeInsets = insets.getInsets(insetTypes);
+                view.setPadding(safeInsets.left, safeInsets.top, safeInsets.right, safeInsets.bottom);
+                return insets;
+            });
+        }
 
         page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
