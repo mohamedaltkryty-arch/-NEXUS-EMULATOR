@@ -55,3 +55,9 @@ jobs:
           ! grep -q 'android.permission.INTERNET' app/src/main/AndroidManifest.xml
       - name: Run JVM tests and Android lint
         run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug
+      - name: Publish lint diagnostics to job log
+        if: always()
+        shell: bash
+        run: |
+          REPORT="app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt"
+          if [ -f "$REPORT" ]; then cat "$REPORT"; else echo "No lint text report generated."; fi

@@ -137,8 +137,10 @@ public final class MainActivity extends Activity {
         int barColor = dark ? Color.rgb(8, 12, 22) : Color.rgb(244, 247, 252);
         window.setStatusBarColor(barColor);
         window.setNavigationBarColor(barColor);
-        int flags = dark ? 0
-                : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        int flags = dark ? 0 : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        if (!dark && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        }
         window.getDecorView().setSystemUiVisibility(flags);
     }
 
