@@ -17,7 +17,7 @@ PS2, PS3 and Windows game engines are not integrated. Legacy entries may remain 
 
 ## Architecture
 - Android Native Java 17.
-- Android SDK 35, minSdk 23, targetSdk 35.
+- Android SDK 36, minSdk 23, targetSdk 36.
 - SQLiteOpenHelper for local catalogue.
 - SharedPreferences for language/theme.
 - Android Storage Access Framework for user-selected document URIs.

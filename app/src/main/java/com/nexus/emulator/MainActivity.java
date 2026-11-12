@@ -36,6 +36,7 @@ import com.nexus.emulator.util.AppStrings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.text.NumberFormat;
 
 public final class MainActivity extends Activity {
     private static final int REQUEST_IMPORT_FILES = 4101;
@@ -112,14 +113,16 @@ public final class MainActivity extends Activity {
         return AppStrings.get(key, isArabic());
     }
 
+    private Locale appLocale() {
+        return isArabic() ? new Locale("ar") : Locale.ENGLISH;
+    }
+
+    @SuppressWarnings("deprecation")
     private void applySystemBars() {
         Window window = getWindow();
         boolean dark = settings.isDarkTheme();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (Build.VERSION.SDK_INT < 35) {
-                window.setDecorFitsSystemWindows(false);
-            }
+        if (Build.VERSION.SDK_INT >= 35) {
             window.setStatusBarColor(Color.TRANSPARENT);
             window.setNavigationBarColor(Color.TRANSPARENT);
             window.setStatusBarContrastEnforced(false);
@@ -137,6 +140,17 @@ public final class MainActivity extends Activity {
         int barColor = dark ? Color.rgb(8, 12, 22) : Color.rgb(244, 247, 252);
         window.setStatusBarColor(barColor);
         window.setNavigationBarColor(barColor);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsetsController controller = window.getInsetsController();
+            if (controller != null) {
+                int lightBars = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                        | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                controller.setSystemBarsAppearance(dark ? 0 : lightBars, lightBars);
+            }
+            return;
+        }
+
         int flags = dark ? 0 : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
         if (!dark && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
@@ -151,7 +165,7 @@ public final class MainActivity extends Activity {
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         scroll.setBackgroundColor(palette.background);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        if (Build.VERSION.SDK_INT >= 35) {
             scroll.setOnApplyWindowInsetsListener((view, insets) -> {
                 int insetTypes = WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout();
                 android.graphics.Insets safeInsets = insets.getInsets(insetTypes);
@@ -333,7 +347,7 @@ public final class MainActivity extends Activity {
             gameList.addView(createGameCard(game), margin(-1, -2, 0, dp(10)));
         }
 
-        if (gameCount != null) gameCount.setText(Integer.toString(totalPsp));
+        if (gameCount != null) gameCount.setText(NumberFormat.getIntegerInstance(appLocale()).format(totalPsp));
         if (shown == 0) {
             LinearLayout empty = panel();
             empty.setGravity(Gravity.CENTER);
@@ -489,7 +503,7 @@ public final class MainActivity extends Activity {
         renderLibraryItems();
 
         if (imported + duplicates + rejected > 0) {
-            toast(String.format(Locale.getDefault(), s("import_summary"),
+            toast(String.format(appLocale(), s("import_summary"),
                     imported, duplicates, rejected));
         }
     }

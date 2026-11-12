@@ -22,14 +22,14 @@ The Java frontend does not embed a PPSSPP core. It opens the user-selected PSP f
 ## Android compatibility
 
 - Frontend: Android 6.0 (API 23) and newer.
-- Compile/target SDK: 35.
+- Compile/target SDK: 36.
 - Java: 17.
 - No ABI filter on the Java frontend.
 - External PPSSPP runtime must support the device ABI and graphics driver.
 
 ## Build and verification
 
-Requirements: JDK 17, Android SDK Platform 35, Build Tools 35.0.0 and Gradle 8.9.
+Requirements: JDK 17, Android SDK Platform 36, Build Tools 36.0.0, Android Gradle Plugin 8.9.1 and Gradle 8.11.1.
 
 Build commands: gradle --no-daemon :app:testDebugUnitTest, then gradle --no-daemon :app:assembleDebug.
 
