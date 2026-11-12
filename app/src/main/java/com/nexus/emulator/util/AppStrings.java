@@ -7,9 +7,9 @@ public final class AppStrings {
     private static final Map<String, String[]> VALUES = new HashMap<>();
 
     static {
-        put("tagline", "مكتبتك. ألعابك. مكان واحد.", "YOUR GAMES. ONE PLACE.");
-        put("hero_title", "عِش تجربة اللعب بطريقتك", "Your games, organized.");
-        put("hero_body", "اجمع ألعابك وأدرها من مكتبة واحدة.", "Bring your collection into one library.");
+        put("tagline", "ألعابك. مكتبتك. انطلق.", "YOUR GAMES. ONE LIBRARY.");
+        put("hero_title", "مكتبتك جاهزة للعب", "Your PSP collection, ready to play.");
+        put("hero_body", "استورد ألعاب PSP الخاصة بك، رتّبها وشغّلها من مكان واحد.", "Import, organize and launch your PSP games from one place.");
         put("import", "استيراد ألعاب", "IMPORT GAMES");
         put("import_file", "استيراد ملف لعبة", "Import a game file");
         put("import_folder", "استيراد مجلد لعبة PC أو PS3", "Import a PC or PS3 game folder");
@@ -73,6 +73,7 @@ public final class AppStrings {
         put("file_picker_error", "تعذر فتح مدير الملفات على هذا الجهاز.", "Could not open the file picker on this device.");
         put("no_files_selected", "لم يتم اختيار أي ملف.", "No files were selected.");
         put("import_error", "تعذر إضافة الملف. تحقق من مساحة الجهاز وصلاحية الوصول.", "Could not add this file. Check device storage and file access.");
+        put("import_summary", "اكتمل الاستيراد: %1$d أُضيفت، %2$d مكررة، %3$d مرفوضة.", "Import complete: %1$d added, %2$d duplicates, %3$d skipped.");
     }
 
     private AppStrings() { }

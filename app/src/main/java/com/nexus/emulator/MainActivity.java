@@ -425,31 +425,39 @@ public final class MainActivity extends Activity {
     }
 
     private void processNextImportedFile() {
-        if (pendingFileIndex >= pendingFiles.size()) {
-            pendingFiles.clear();
-            pendingFileIndex = 0;
-            pendingGrantFlags = 0;
-            renderLibraryItems();
-            return;
+        int imported = 0;
+        int duplicates = 0;
+        int rejected = 0;
+
+        while (pendingFileIndex < pendingFiles.size()) {
+            Uri uri = pendingFiles.get(pendingFileIndex++);
+            String name = queryDisplayName(uri);
+            String extension = GameFileClassifier.extensionOf(name);
+
+            if (!GameFileClassifier.isSupportedPspExtension(extension)) {
+                rejected++;
+                continue;
+            }
+            if (!persistReadPermission(uri, pendingGrantFlags)) {
+                rejected++;
+                continue;
+            }
+
+            int result = storeGame(uri, name, GameFileClassifier.PSP, extension, querySize(uri));
+            if (result > 0) imported++;
+            else if (result == 0) duplicates++;
+            else rejected++;
         }
 
-        Uri uri = pendingFiles.get(pendingFileIndex++);
-        String name = queryDisplayName(uri);
-        String extension = GameFileClassifier.extensionOf(name);
+        pendingFiles.clear();
+        pendingFileIndex = 0;
+        pendingGrantFlags = 0;
+        renderLibraryItems();
 
-        if (!GameFileClassifier.isSupportedPspExtension(extension)) {
-            toast(s("unsupported") + " " + name);
-            processNextImportedFile();
-            return;
+        if (imported + duplicates + rejected > 0) {
+            toast(String.format(Locale.getDefault(), s("import_summary"),
+                    imported, duplicates, rejected));
         }
-        if (!persistReadPermission(uri, pendingGrantFlags)) {
-            toast(s("permission_error"));
-            processNextImportedFile();
-            return;
-        }
-
-        storeGame(uri, name, GameFileClassifier.PSP, extension, querySize(uri));
-        processNextImportedFile();
     }
 
     private boolean persistReadPermission(Uri uri, int grantFlags) {
@@ -467,21 +475,18 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private void storeGame(Uri uri, String name, String platform, String extension, long size) {
+    private int storeGame(Uri uri, String name, String platform, String extension, long size) {
         if (uri == null || !"content".equals(uri.getScheme())
                 || !GameFileClassifier.PSP.equals(platform)
                 || !GameFileClassifier.isSupportedPspExtension(extension)) {
-            toast(s("unsupported"));
-            return;
+            return -1;
         }
         String safeName = name == null || name.trim().isEmpty() ? "PSP game." + extension : name.trim();
         try {
-            boolean inserted = database.insert(safeName, GameFileClassifier.PSP, uri.toString(),
-                    extension, size, System.currentTimeMillis());
-            toast(inserted ? s("imported") : s("duplicate"));
-            renderLibraryItems();
+            return database.insert(safeName, GameFileClassifier.PSP, uri.toString(),
+                    extension, size, System.currentTimeMillis()) ? 1 : 0;
         } catch (RuntimeException error) {
-            toast(s("import_error"));
+            return -1;
         }
     }
 
