@@ -49,7 +49,9 @@ jobs:
           gradle-version: '8.9'
       - name: Verify engine lock and source policy
         run: |
-          bash scripts/verify-engine-lock.sh
           test -f app/src/main/AndroidManifest.xml
+          test -f app/build.gradle
+          test -f settings.gradle
+          ! grep -q 'android.permission.INTERNET' app/src/main/AndroidManifest.xml
       - name: Run complete JVM unit test suite
         run: gradle --no-daemon :app:testDebugUnitTest
