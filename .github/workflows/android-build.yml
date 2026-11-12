@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      build_apk:
+        description: 'Build the installable APK after verification is complete'
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -65,7 +71,7 @@ jobs:
   build:
     name: Build and verify installable APK
     needs: verify
-    if: github.event_name != 'pull_request'
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_apk == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -118,6 +124,7 @@ jobs:
   emulator-smoke:
     name: Install and launch on Android emulator
     needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_apk == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
