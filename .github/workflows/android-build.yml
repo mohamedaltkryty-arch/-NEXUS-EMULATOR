@@ -147,3 +147,16 @@ jobs:
             sleep 3
             adb shell dumpsys activity activities | grep -q "com.nexus.emulator.MainActivity"
             adb shell pm path com.nexus.emulator.debug
+            mkdir -p artifacts
+            adb shell uiautomator dump /sdcard/nexus-window.xml >/dev/null
+            adb pull /sdcard/nexus-window.xml artifacts/nexus-window.xml
+            grep -q "NEXUS" artifacts/nexus-window.xml
+            grep -q "PSP" artifacts/nexus-window.xml
+            adb exec-out screencap -p > artifacts/nexus-home.png
+      - name: Upload emulator UI evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-emulator-v0.8.0-smoke-evidence
+          path: artifacts/nexus-*
+          if-no-files-found: error
+          retention-days: 14

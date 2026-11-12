@@ -151,7 +151,9 @@ public final class MainActivity extends Activity {
 
         int barColor = dark ? Color.rgb(11, 16, 32) : Color.rgb(244, 246, 251);
         window.setStatusBarColor(barColor);
-        window.setNavigationBarColor(barColor);
+        int navigationColor = !dark && Build.VERSION.SDK_INT < Build.VERSION_CODES.O
+                ? Color.rgb(11, 16, 32) : barColor;
+        window.setNavigationBarColor(navigationColor);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             WindowInsetsController controller = window.getInsetsController();
@@ -305,9 +307,9 @@ public final class MainActivity extends Activity {
             refreshLibraryItems();
         });
 
-        LinearLayout.LayoutParams filterParams = new LinearLayout.LayoutParams(0, dp(46), 1f);
+        LinearLayout.LayoutParams filterParams = new LinearLayout.LayoutParams(0, dp(48), 1f);
         filters.addView(allFilterButton, filterParams);
-        LinearLayout.LayoutParams favoriteParams = new LinearLayout.LayoutParams(0, dp(46), 1f);
+        LinearLayout.LayoutParams favoriteParams = new LinearLayout.LayoutParams(0, dp(48), 1f);
         if (isArabic()) favoriteParams.rightMargin = dp(8); else favoriteParams.leftMargin = dp(8);
         filters.addView(favoritesFilterButton, favoriteParams);
         container.addView(filters, margin(-1, -2, 0, dp(12)));
@@ -353,9 +355,7 @@ public final class MainActivity extends Activity {
                 });
         gameAdapter.setGames(initialGames);
         gameList.setAdapter(gameAdapter);
-        gameList.setOnItemClickListener((parent, view, position, id) ->
-                showGameDetails(gameAdapter.getItem(position)));
-        listFrame.addView(gameList, new FrameLayout.LayoutParams(-1, -1));
+listFrame.addView(gameList, new FrameLayout.LayoutParams(-1, -1));
 
         emptyState = createEmptyState(false);
         emptyState.setVisibility(View.GONE);
