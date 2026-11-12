@@ -15,7 +15,7 @@ Android users who legally own PSP game dumps and want one polished place to impo
 A mobile-first premium utility interface: clear NEXUS identity, one dominant import action, concise collection count, search, two simple filters (All/Favorites), clean game cards with file metadata, and a quiet settings surface. No disabled platform selectors, fake capability labels, or controls with no behavior. The UI follows system text direction and persists language/theme.
 
 ## Architecture
-Keep the existing Java 17 Android Native app and SQLite database. Keep the Storage Access Framework for user-authorized file selection; take only the read grant actually returned by Android and persist it. A PSP policy classifies only four supported extensions. A single PPSSPP adapter validates the saved content URI before issuing ACTION_VIEW with a temporary read grant. No additional backend or network permission is introduced.
+Keep the existing Java 17 Android Native app and SQLite database. The database migrates safely to schema version 2 by adding a composite platform/extension index; existing rows are retained. Keep the Storage Access Framework for user-authorized file selection; take only the read grant actually returned by Android and persist it. A PSP policy classifies only four supported extensions. A single PPSSPP adapter validates the saved content URI before issuing ACTION_VIEW with a temporary read grant. No additional backend or network permission is introduced.
 
 ## Acceptance criteria
 1. Only PSP formats can enter the active library.

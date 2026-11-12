@@ -357,16 +357,12 @@ public final class MainActivity extends Activity {
 
         String query = searchField == null || searchField.getText() == null
                 ? "" : searchField.getText().toString().trim().toLowerCase(Locale.ROOT);
-        List<GameEntry> all = database.getAll();
-        int totalPsp = 0;
+        List<GameEntry> all = database.getAllPsp();
+        int totalPsp = all.size();
         int shown = 0;
 
         for (GameEntry game : all) {
-            if (!GameFileClassifier.PSP.equals(game.getPlatform())
-                    || !GameFileClassifier.isSupportedPspExtension(game.getExtension())) {
-                continue;
-            }
-            totalPsp++;
+
             if ("FAVORITES".equals(activeFilter) && !game.isFavorite()) continue;
             String name = game.getName() == null ? "" : game.getName();
             if (!query.isEmpty() && !name.toLowerCase(Locale.ROOT).contains(query)) continue;

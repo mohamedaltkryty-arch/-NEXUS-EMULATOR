@@ -6,6 +6,7 @@ NEXUS is a polished, offline-first Android companion for a personal PSP game col
 
 - Import one or multiple PSP game files using Android's Storage Access Framework.
 - Supported formats: ISO, CSO, PBP and ZSO.
+- SQLite uses a versioned, non-destructive schema upgrade with an indexed PSP-only query; historical non-PSP rows are retained but not loaded into the active library.
 - Persist only the read permission granted by the selected document provider.
 - Browse a local SQLite library, search by game name, filter favorites, view file details, remove entries and launch games.
 - Arabic RTL by default and English language switch.

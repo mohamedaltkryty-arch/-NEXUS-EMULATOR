@@ -14,7 +14,7 @@ import java.util.List;
 
 public final class GameDatabase extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "nexus_library.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
     private static final String TABLE_GAMES = "games";
     private static final String COL_ID = "_id";
     private static final String COL_NAME = "name";
@@ -43,11 +43,17 @@ public final class GameDatabase extends SQLiteOpenHelper {
                 COL_FAVORITE + " INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("CREATE INDEX idx_games_platform ON " + TABLE_GAMES + "(" + COL_PLATFORM + ")");
         db.execSQL("CREATE INDEX idx_games_added ON " + TABLE_GAMES + "(" + COL_ADDED + " DESC)");
+        db.execSQL("CREATE INDEX idx_games_platform_extension ON "
+                + TABLE_GAMES + "(" + COL_PLATFORM + ", " + COL_EXTENSION + ")");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion < 1) onCreate(db);
+        if (oldVersion < 2) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_games_platform_extension ON "
+                    + TABLE_GAMES + "(" + COL_PLATFORM + ", " + COL_EXTENSION + ")");
+        }
     }
 
     public synchronized boolean insert(String name, String platform, String uri,
@@ -74,6 +80,47 @@ public final class GameDatabase extends SQLiteOpenHelper {
             while (cursor.moveToNext()) result.add(read(cursor));
         }
         return result;
+    }
+
+    public synchronized List<GameEntry> getAllPsp() {
+        List<GameEntry> result = new ArrayList<>();
+        List<String> extensions = com.nexus.emulator.catalog.GameFileClassifier.supportedPspExtensions();
+        StringBuilder selection = new StringBuilder(COL_PLATFORM).append("=? AND ")
+                .append(COL_EXTENSION).append(" IN (");
+        String[] selectionArgs = new String[extensions.size() + 1];
+        selectionArgs[0] = com.nexus.emulator.catalog.GameFileClassifier.PSP;
+        for (int i = 0; i < extensions.size(); i++) {
+            if (i > 0) selection.append(',');
+            selection.append('?');
+            selectionArgs[i + 1] = extensions.get(i);
+        }
+        selection.append(')');
+
+        String order = COL_FAVORITE + " DESC, " + COL_ADDED + " DESC, "
+                + COL_NAME + " COLLATE NOCASE ASC";
+        try (Cursor cursor = getReadableDatabase().query(TABLE_GAMES, null,
+                selection.toString(), selectionArgs, null, null, order)) {
+            while (cursor.moveToNext()) result.add(read(cursor));
+        }
+        return result;
+    }
+
+    public synchronized int countPsp() {
+        List<String> extensions = com.nexus.emulator.catalog.GameFileClassifier.supportedPspExtensions();
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM ").append(TABLE_GAMES)
+                .append(" WHERE ").append(COL_PLATFORM).append("=? AND ")
+                .append(COL_EXTENSION).append(" IN (");
+        String[] args = new String[extensions.size() + 1];
+        args[0] = com.nexus.emulator.catalog.GameFileClassifier.PSP;
+        for (int i = 0; i < extensions.size(); i++) {
+            if (i > 0) sql.append(',');
+            sql.append('?');
+            args[i + 1] = extensions.get(i);
+        }
+        sql.append(')');
+        try (Cursor cursor = getReadableDatabase().rawQuery(sql.toString(), args)) {
+            return cursor.moveToFirst() ? cursor.getInt(0) : 0;
+        }
     }
 
     public synchronized boolean setFavorite(long id, boolean favorite) {
